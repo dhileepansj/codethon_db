@@ -49,4 +49,41 @@ public class SessionStatusDto
     public string? DatabaseName { get; set; }
     public DateTime? ExpiresAt { get; set; }
     public int? RemainingMinutes { get; set; }
+
+    // Schedule info
+    public ScheduleInfoDto? Schedule { get; set; }
+}
+
+public class ScheduleInfoDto
+{
+    public string SessionStartTime { get; set; } = string.Empty;
+    public string SessionEndTime { get; set; } = string.Empty;
+    public int ExtensionMinutes { get; set; }
+    public bool IsInBreak { get; set; }
+    public string? CurrentBreakTitle { get; set; }
+    public string? BreakEndsAt { get; set; }
+    /// <summary>True if schedule date is set but doesn't match today.</summary>
+    public bool IsWrongDate { get; set; }
+    /// <summary>True if current time is before session start.</summary>
+    public bool IsBeforeStart { get; set; }
+    /// <summary>True if current time is after session end.</summary>
+    public bool IsAfterEnd { get; set; }
+    /// <summary>The schedule date (if set).</summary>
+    public string? ScheduleDate { get; set; }
+    /// <summary>Alert thresholds with colors.</summary>
+    public List<AlertConfigItem> Alerts { get; set; } = new();
+    public List<BreakInfoDto> Breaks { get; set; } = new();
+}
+
+public class AlertConfigItem
+{
+    public int Minutes { get; set; }
+    public string Color { get; set; } = "#3b82f6";
+}
+
+public class BreakInfoDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string StartTime { get; set; } = string.Empty;
+    public string EndTime { get; set; } = string.Empty;
 }

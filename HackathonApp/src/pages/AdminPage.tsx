@@ -19,6 +19,7 @@ import AiDetectionPanel from "@/components/admin/AiDetectionPanel";
 import TabSwitchLogsPanel from "@/components/admin/TabSwitchLogsPanel";
 import SecuritySettingsPanel from "@/components/admin/SecuritySettingsPanel";
 import ScaffoldScriptsPanel from "@/components/admin/ScaffoldScriptsPanel";
+import SchedulePanel from "@/components/admin/SchedulePanel";
 import type { AppDispatch } from "@/redux/store";
 import type { UserDto, DashboardStats } from "@/types";
 
@@ -53,6 +54,7 @@ export default function AdminPage() {
   const [showTabSwitchLogs, setShowTabSwitchLogs] = useState(false);
   const [showSecuritySettings, setShowSecuritySettings] = useState(false);
   const [showScaffoldScripts, setShowScaffoldScripts] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
 
   const [newUser, setNewUser] = useState({ UserID: "", Password: "", FullName: "", Email: "" });
   const [serverConfig, setServerConfig] = useState({ ServerName: "", AdminUserId: "", AdminPassword: "", DbPrefix: "Hackathon_" });
@@ -173,6 +175,7 @@ export default function AdminPage() {
           <SidebarItem icon={<ArrowLeftRight className="h-4 w-4" />} label="Tab Switch Logs" active={false} onClick={() => setShowTabSwitchLogs(true)} />
           <SidebarItem icon={<Key className="h-4 w-4" />} label="Security Settings" active={false} onClick={() => setShowSecuritySettings(true)} />
           <SidebarItem icon={<Code className="h-4 w-4" />} label="Scaffold Scripts" active={false} onClick={() => setShowScaffoldScripts(true)} />
+          <SidebarItem icon={<Clock className="h-4 w-4" />} label="Session Schedule" active={false} onClick={() => setShowSchedule(true)} />
           <SidebarItem icon={<Calendar className="h-4 w-4" />} label="Hackathon Setup" active={false} onClick={() => setShowHackathonSetup(true)} />
           <SidebarItem icon={<Settings className="h-4 w-4" />} label="Server Config" active={false} onClick={() => setShowServerConfig(true)} />
         </nav>
@@ -359,6 +362,7 @@ export default function AdminPage() {
       {showTabSwitchLogs && <TabSwitchLogsPanel onClose={() => setShowTabSwitchLogs(false)} />}
       {showSecuritySettings && <SecuritySettingsPanel onClose={() => setShowSecuritySettings(false)} />}
       {showScaffoldScripts && <ScaffoldScriptsPanel onClose={() => setShowScaffoldScripts(false)} />}
+      {showSchedule && <SchedulePanel onClose={() => setShowSchedule(false)} />}
 
       {showServerConfig && (
         <Modal title="Server Configuration" onClose={() => setShowServerConfig(false)}>

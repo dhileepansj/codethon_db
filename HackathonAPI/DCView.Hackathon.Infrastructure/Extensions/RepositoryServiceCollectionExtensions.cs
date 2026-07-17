@@ -22,6 +22,7 @@ public static class RepositoryServiceCollectionExtensions
         services.AddScoped<IPasswordChangeLogRepository, PasswordChangeLogRepository>();
         services.AddScoped<ISecuritySettingsRepository, SecuritySettingsRepository>();
         services.AddScoped<IScaffoldScriptRepository, ScaffoldScriptRepository>();
+        services.AddScoped<IScheduleRepository, ScheduleRepository>();
         return services;
     }
 }

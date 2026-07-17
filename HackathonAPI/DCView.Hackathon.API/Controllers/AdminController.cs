@@ -621,6 +621,93 @@ public class AdminController : ControllerBase
         await repo.DeleteAsync(id);
         return Ok(new { message = "Script deleted" });
     }
+
+    // ─── Schedule Management ──────────────────────────────────────
+
+    [HttpGet("schedule")]
+    public async Task<IActionResult> GetSchedule()
+    {
+        var repo = HttpContext.RequestServices.GetRequiredService<IScheduleRepository>();
+        var schedule = await repo.GetActiveScheduleAsync();
+        if (schedule == null) return Ok(new { configured = false });
+        return Ok(new
+        {
+            configured = true,
+            schedule.Id,
+            schedule.SessionStartTime,
+            schedule.SessionEndTime,
+            schedule.ExtensionMinutes,
+            schedule.AlertConfig,
+            schedule.IsActive,
+            schedule.ScheduleDate,
+            breaks = schedule.Breaks.Select(b => new { b.Id, b.Title, b.StartTime, b.EndTime })
+        });
+    }
+
+    [HttpPost("schedule")]
+    public async Task<IActionResult> SaveSchedule([FromBody] SaveScheduleDto request)
+    {
+        var repo = HttpContext.RequestServices.GetRequiredService<IScheduleRepository>();
+
+        var schedule = await repo.GetActiveScheduleAsync();
+        if (schedule == null)
+        {
+            schedule = new HackathonSchedule
+            {
+                CreatedDate = DateTimeHelper.Now,
+                CreatedBy = User.FindFirst(ClaimTypes.Name)?.Value
+            };
+        }
+
+        schedule.SessionStartTime = request.SessionStartTime;
+        schedule.SessionEndTime = request.SessionEndTime;
+        schedule.ScheduleDate = request.ScheduleDate;
+        if (!string.IsNullOrWhiteSpace(request.AlertConfig))
+            schedule.AlertConfig = request.AlertConfig;
+        schedule.IsActive = true;
+        schedule.ModifiedDate = DateTimeHelper.Now;
+        schedule.ModifiedBy = User.FindFirst(ClaimTypes.Name)?.Value;
+
+        await repo.CreateOrUpdateAsync(schedule);
+        return Ok(new { message = "Schedule saved", schedule.Id });
+    }
+
+    [HttpPost("schedule/breaks")]
+    public async Task<IActionResult> AddBreak([FromBody] AddBreakDto request)
+    {
+        var repo = HttpContext.RequestServices.GetRequiredService<IScheduleRepository>();
+        var schedule = await repo.GetActiveScheduleAsync();
+        if (schedule == null) return BadRequest(new { message = "No active schedule. Create a schedule first." });
+
+        var breakItem = new HackathonBreak
+        {
+            ScheduleId = schedule.Id,
+            Title = request.Title?.Trim() ?? "Break",
+            StartTime = request.StartTime,
+            EndTime = request.EndTime,
+        };
+        await repo.AddBreakAsync(breakItem);
+        return Ok(new { message = "Break added", breakItem.Id });
+    }
+
+    [HttpDelete("schedule/breaks/{breakId:int}")]
+    public async Task<IActionResult> RemoveBreak(int breakId)
+    {
+        var repo = HttpContext.RequestServices.GetRequiredService<IScheduleRepository>();
+        await repo.RemoveBreakAsync(breakId);
+        return Ok(new { message = "Break removed" });
+    }
+
+    [HttpPost("schedule/extend")]
+    public async Task<IActionResult> ExtendSchedule([FromBody] ExtendScheduleDto request)
+    {
+        var repo = HttpContext.RequestServices.GetRequiredService<IScheduleRepository>();
+        var schedule = await repo.GetActiveScheduleAsync();
+        if (schedule == null) return BadRequest(new { message = "No active schedule" });
+
+        await repo.UpdateExtensionAsync(schedule.Id, request.Minutes);
+        return Ok(new { message = $"Extended by {request.Minutes} minutes. Total extension: {schedule.ExtensionMinutes + request.Minutes}m" });
+    }
 }
 
 public class ConfigureServerDto
@@ -671,4 +758,25 @@ public class CreateScaffoldScriptDto
     public int ExecutionOrder { get; set; } = 1;
     public bool IsActive { get; set; } = true;
 }
+
+public class SaveScheduleDto
+{
+    public string SessionStartTime { get; set; } = "10:00";
+    public string SessionEndTime { get; set; } = "18:00";
+    public DateTime? ScheduleDate { get; set; }
+    public string? AlertConfig { get; set; }
+}
+
+public class AddBreakDto
+{
+    public string? Title { get; set; }
+    public string StartTime { get; set; } = string.Empty;
+    public string EndTime { get; set; } = string.Empty;
+}
+
+public class ExtendScheduleDto
+{
+    public int Minutes { get; set; }
+}
+
 

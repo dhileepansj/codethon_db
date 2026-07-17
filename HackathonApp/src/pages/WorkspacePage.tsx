@@ -88,6 +88,8 @@ export default function WorkspacePage() {
     return !tourSeen;
   });
   const [devToolsBlocked, setDevToolsBlocked] = useState(false);
+  const [timeAlert, setTimeAlert] = useState<number | null>(null); // minutes remaining for current alert
+  const shownAlertsRef = useRef<Set<number>>(new Set());
   const saveReminderRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const editorRef = useRef<any>(null);
@@ -199,6 +201,25 @@ export default function WorkspacePage() {
   const isSessionDeactivated = sessionInfo !== null && !sessionInfo.isActive && !sessionInfo.isExpired;
   const isSubmitted = sessionInfo?.isSubmitted ?? false;
 
+  // ─── Time Alerts ────────────────────────────────────────────────
+  const [activeAlertColor, setActiveAlertColor] = useState("#3b82f6");
+
+  useEffect(() => {
+    if (!sessionInfo?.schedule?.alerts || !sessionInfo.remainingMinutes) return;
+    const remaining = sessionInfo.remainingMinutes;
+    const alerts = sessionInfo.schedule.alerts;
+
+    for (const alert of alerts) {
+      if (remaining <= alert.minutes && !shownAlertsRef.current.has(alert.minutes)) {
+        shownAlertsRef.current.add(alert.minutes);
+        setActiveAlertColor(alert.color);
+        setTimeAlert(alert.minutes);
+        setTimeout(() => setTimeAlert(null), 8000);
+        break;
+      }
+    }
+  }, [sessionInfo?.remainingMinutes, sessionInfo?.schedule?.alerts]);
+
   // ─── Editor Change Handler ──────────────────────────────────────
 
   const activeTabIdRef = useRef(activeEditorTabId);
@@ -228,6 +249,18 @@ export default function WorkspacePage() {
 
     if (!content.trim()) {
       toast.error("Nothing to execute");
+      return;
+    }
+    if (sessionInfo?.schedule?.isInBreak) {
+      toast.error(`Execution paused — ${sessionInfo.schedule.currentBreakTitle || "Break"} in progress. Resumes at ${sessionInfo.schedule.breakEndsAt}`);
+      return;
+    }
+    if (sessionInfo?.schedule?.isBeforeStart) {
+      toast.error(`Session hasn't started yet. Starts at ${sessionInfo.schedule.sessionStartTime}`);
+      return;
+    }
+    if (sessionInfo?.schedule?.isWrongDate) {
+      toast.error("Session is not available today.");
       return;
     }
     setIsExecuting(true);
@@ -486,6 +519,59 @@ export default function WorkspacePage() {
         </div>
       )}
 
+      {/* Time Alert */}
+      {timeAlert !== null && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setTimeAlert(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
+            {/* Colored header based on admin-configured color */}
+            <div className="px-6 py-5" style={{ background: `linear-gradient(135deg, ${activeAlertColor}, ${activeAlertColor}dd)` }}>
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 rounded-full p-2">
+                  <Timer className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    {timeAlert <= 1 ? "⚠️ Final Minute!" :
+                     timeAlert <= 5 ? "⏰ Almost Done!" :
+                     timeAlert <= 15 ? "🕐 Time Running Low" :
+                     "📢 Time Reminder"}
+                  </h3>
+                  <p className="text-white/80 text-sm">
+                    {timeAlert} minute{timeAlert !== 1 ? "s" : ""} remaining
+                  </p>
+                </div>
+              </div>
+            </div>
+            {/* Body */}
+            <div className="px-6 py-5">
+              <p className="text-gray-700 dark:text-gray-200 text-sm leading-relaxed">
+                {timeAlert <= 1
+                  ? "This is your final minute! Save all your work immediately and submit if you haven't already."
+                  : timeAlert <= 5
+                  ? "Only a few minutes left. Make sure all your scripts are saved. Consider submitting your work now."
+                  : timeAlert <= 15
+                  ? "The session will end soon. Please save your work frequently and prepare for submission."
+                  : "The session will be ending in a while. Keep saving your work regularly to avoid data loss."}
+              </p>
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  onClick={() => { setTimeAlert(null); handleSave(); }}
+                  className="flex-1 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  Save My Work
+                </button>
+                <button
+                  onClick={() => setTimeAlert(null)}
+                  className="px-4 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Guided Tour */}
       {showTour && !isSessionDeactivated && !isSubmitted && (
         <GuidedTour
@@ -553,13 +639,26 @@ export default function WorkspacePage() {
           <span className="font-semibold text-teal-800 dark:text-teal-300">NovacCodeLab</span>
         </div>
         <div className="flex items-center gap-4">
+          {/* Timer + Schedule Info */}
           {isSessionExpired ? (
             <div className="flex items-center gap-1 text-sm text-red-600 font-medium">
               <Timer className="h-4 w-4" /><span>Expired</span>
             </div>
-          ) : sessionInfo?.remainingMinutes != null ? (
-            <LiveTimer expiresAt={sessionInfo.expiresAt} />
-          ) : null}
+          ) : (
+            <div className="flex items-center gap-3">
+              {sessionInfo?.schedule && (
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 hidden sm:inline">
+                  {sessionInfo.schedule.sessionStartTime} – {sessionInfo.schedule.sessionEndTime}
+                  {sessionInfo.schedule.extensionMinutes > 0 && (
+                    <span className="text-green-600 ml-1">+{sessionInfo.schedule.extensionMinutes}m</span>
+                  )}
+                </span>
+              )}
+              {(sessionInfo?.remainingMinutes != null || sessionInfo?.schedule) && (
+                <LiveTimer expiresAt={sessionInfo?.expiresAt} schedule={sessionInfo?.schedule} />
+              )}
+            </div>
+          )}
           <span className="text-sm text-gray-600 dark:text-gray-300">{user?.fullName || user?.userID}</span>
           {!isSubmitted && !isSessionExpired && !isSessionDeactivated && (
             <button
@@ -625,7 +724,80 @@ export default function WorkspacePage() {
       {/* Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Main content area */}
-        <div className={`flex-1 flex flex-col overflow-hidden ${showQuestionPanel ? "border-r dark:border-gray-700" : ""}`}>
+        <div className={`flex-1 flex flex-col overflow-hidden relative ${showQuestionPanel ? "border-r dark:border-gray-700" : ""}`}>
+          {/* Schedule Restriction Overlays */}
+          {sessionInfo?.schedule?.isWrongDate && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95">
+              <div className="text-center max-w-md px-6">
+                <div className="bg-blue-500/20 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                  <Timer className="h-12 w-12 text-blue-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-3">Session Not Available Today</h2>
+                <p className="text-gray-300 mb-4">
+                  The hackathon is scheduled for <strong className="text-white">{sessionInfo.schedule.scheduleDate}</strong>.
+                </p>
+                <p className="text-gray-400 text-sm mb-6">Please come back on the scheduled date.</p>
+                <button onClick={handleLogout} className="px-5 py-2 text-sm font-medium bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
+
+          {sessionInfo?.schedule?.isBeforeStart && !sessionInfo.schedule.isWrongDate && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95">
+              <div className="text-center max-w-md px-6">
+                <div className="bg-teal-500/20 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                  <Timer className="h-12 w-12 text-teal-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-3">Session Not Started Yet</h2>
+                <p className="text-gray-300 mb-4">
+                  The session starts at <strong className="text-white">{sessionInfo.schedule.sessionStartTime}</strong>.
+                </p>
+                <p className="text-gray-400 text-sm mb-6">Please wait until the scheduled start time.</p>
+                <button onClick={handleLogout} className="px-5 py-2 text-sm font-medium bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
+
+          {sessionInfo?.schedule?.isAfterEnd && !sessionInfo.schedule.isWrongDate && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95">
+              <div className="text-center max-w-md px-6">
+                <div className="bg-red-500/20 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                  <Timer className="h-12 w-12 text-red-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-3">Session Has Ended</h2>
+                <p className="text-gray-300 mb-4">
+                  Today's session ended at <strong className="text-white">{sessionInfo.schedule.sessionEndTime}</strong>.
+                </p>
+                <p className="text-gray-400 text-sm mb-6">Thank you for participating.</p>
+                <button onClick={handleLogout} className="px-5 py-2 text-sm font-medium bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Break Overlay */}
+          {sessionInfo?.schedule?.isInBreak && !sessionInfo.schedule.isWrongDate && !sessionInfo.schedule.isBeforeStart && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-amber-950/90">
+              <div className="text-center max-w-md px-6">
+                <div className="bg-amber-500/20 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                  <Timer className="h-12 w-12 text-amber-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-3">{sessionInfo.schedule.currentBreakTitle || "Break Time"}</h2>
+                <p className="text-amber-200 mb-4">
+                  The session is currently on a break. You can still view and edit your scripts, but query execution is paused.
+                </p>
+                <p className="text-amber-300/70 text-sm">
+                  Resumes at <strong className="text-white">{sessionInfo.schedule.breakEndsAt}</strong>
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Session Expired Banner */}
           {isSessionExpired && !isSessionDeactivated && (
             <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 flex items-center gap-2 shrink-0">
@@ -1031,26 +1203,50 @@ export default function WorkspacePage() {
 
 // ─── Live Timer ───────────────────────────────────────────────────
 
-function LiveTimer({ expiresAt }: { expiresAt?: string }) {
+function LiveTimer({ expiresAt, schedule }: { expiresAt?: string; schedule?: import("@/types").ScheduleInfo }) {
   const [display, setDisplay] = useState("");
   const [isUrgent, setIsUrgent] = useState(false);
 
   useEffect(() => {
     const calcDisplay = () => {
-      if (!expiresAt) return;
-      const diff = new Date(expiresAt).getTime() - Date.now();
+      let targetTime: number | null = null;
+
+      // Use session expiresAt if available
+      if (expiresAt) {
+        targetTime = new Date(expiresAt).getTime();
+      }
+
+      // Use schedule end time if available
+      if (schedule && !schedule.isAfterEnd) {
+        const now = new Date();
+        const [h, m] = schedule.sessionEndTime.split(":").map(Number);
+        const scheduleEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0).getTime();
+
+        // Use the LATER of the two (session extension should override schedule)
+        if (targetTime === null) {
+          targetTime = scheduleEnd;
+        } else {
+          targetTime = Math.max(targetTime, scheduleEnd);
+        }
+      }
+
+      if (targetTime === null) { setDisplay(""); return; }
+
+      const diff = targetTime - Date.now();
       if (diff <= 0) { setDisplay("00:00:00"); setIsUrgent(true); return; }
       const totalSec = Math.floor(diff / 1000);
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      const s = totalSec % 60;
-      setDisplay(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`);
+      const hrs = Math.floor(totalSec / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+      setDisplay(`${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`);
       setIsUrgent(totalSec <= 300);
     };
     calcDisplay();
     const interval = setInterval(calcDisplay, 1000);
     return () => clearInterval(interval);
-  }, [expiresAt]);
+  }, [expiresAt, schedule]);
+
+  if (!display) return null;
 
   return (
     <div className={`flex items-center gap-1 text-sm font-mono font-medium ${isUrgent ? "text-red-600 animate-pulse" : "text-orange-600"}`}>

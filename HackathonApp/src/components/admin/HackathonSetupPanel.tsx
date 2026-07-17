@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Upload, Save, FileText, Calendar, Clock, Timer } from "lucide-react";
+import { X, Upload, Save, FileText, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { adminService } from "@/services/adminService";
 
@@ -10,9 +10,6 @@ interface HackathonSetupPanelProps {
 export default function HackathonSetupPanel({ onClose }: HackathonSetupPanelProps) {
   const [title, setTitle] = useState("");
   const [htmlContent, setHtmlContent] = useState("");
-  const [scheduledDate, setScheduledDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
   const [durationMinutes, setDurationMinutes] = useState<number | "">("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,9 +26,6 @@ export default function HackathonSetupPanel({ onClose }: HackathonSetupPanelProp
       if (data?.configured) {
         setTitle(data.title || "");
         setHtmlContent(data.htmlContent || "");
-        setScheduledDate(data.scheduledDate ? data.scheduledDate.split("T")[0] : "");
-        setStartTime(data.startTime || "");
-        setEndTime(data.endTime || "");
         setDurationMinutes(data.durationMinutes ?? "");
       }
     } catch {
@@ -78,9 +72,6 @@ export default function HackathonSetupPanel({ onClose }: HackathonSetupPanelProp
       await adminService.saveQuestionPaper({
         title: title.trim(),
         htmlContent,
-        scheduledDate: scheduledDate || undefined,
-        startTime: startTime || undefined,
-        endTime: endTime || undefined,
         durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
       });
       toast.success("Hackathon setup saved successfully");
@@ -108,7 +99,7 @@ export default function HackathonSetupPanel({ onClose }: HackathonSetupPanelProp
         <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-700">
           <div className="flex items-center gap-2">
             <div className="bg-gradient-to-r from-teal-500 to-orange-500 rounded-lg p-1.5">
-              <Calendar className="h-4 w-4 text-white" />
+              <FileText className="h-4 w-4 text-white" />
             </div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Hackathon Setup</h2>
           </div>
@@ -130,43 +121,6 @@ export default function HackathonSetupPanel({ onClose }: HackathonSetupPanelProp
               placeholder="e.g., SQL Hackathon 2026 — Smart Ticket System"
               className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none"
             />
-          </div>
-
-          {/* Date & Time Row */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" /> Date
-              </label>
-              <input
-                type="date"
-                value={scheduledDate}
-                onChange={(e) => setScheduledDate(e.target.value)}
-                className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" /> Start Time
-              </label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" /> End Time
-              </label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none"
-              />
-            </div>
           </div>
 
           {/* Duration */}

@@ -22,6 +22,33 @@ export interface SessionInfo {
   databaseName?: string;
   expiresAt?: string;
   remainingMinutes?: number;
+  schedule?: ScheduleInfo;
+}
+
+export interface ScheduleInfo {
+  sessionStartTime: string;
+  sessionEndTime: string;
+  extensionMinutes: number;
+  isInBreak: boolean;
+  currentBreakTitle?: string;
+  breakEndsAt?: string;
+  isWrongDate: boolean;
+  isBeforeStart: boolean;
+  isAfterEnd: boolean;
+  scheduleDate?: string;
+  alerts: AlertConfig[];
+  breaks: BreakInfo[];
+}
+
+export interface AlertConfig {
+  minutes: number;
+  color: string;
+}
+
+export interface BreakInfo {
+  title: string;
+  startTime: string;
+  endTime: string;
 }
 
 // Hackathon

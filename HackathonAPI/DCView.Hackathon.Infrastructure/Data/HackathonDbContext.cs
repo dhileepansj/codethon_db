@@ -21,6 +21,8 @@ public class HackathonDbContext : DbContext
     public DbSet<PasswordChangeLog> PasswordChangeLogs { get; set; }
     public DbSet<SecuritySettings> SecuritySettings { get; set; }
     public DbSet<ScaffoldScript> ScaffoldScripts { get; set; }
+    public DbSet<HackathonSchedule> HackathonSchedules { get; set; }
+    public DbSet<HackathonBreak> HackathonBreaks { get; set; }
 
     public HackathonDbContext(DbContextOptions<HackathonDbContext> options)
         : base(options)

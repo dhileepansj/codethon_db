@@ -19,6 +19,7 @@ public class HackathonService : IHackathonService
     private readonly IScaffoldScriptRepository _scaffoldRepo;
     private readonly IFileRepository _fileRepo;
     private readonly IFolderRepository _folderRepo;
+    private readonly IScheduleRepository _scheduleRepo;
     private readonly IConfiguration _config;
 
     public HackathonService(
@@ -29,6 +30,7 @@ public class HackathonService : IHackathonService
         IScaffoldScriptRepository scaffoldRepo,
         IFileRepository fileRepo,
         IFolderRepository folderRepo,
+        IScheduleRepository scheduleRepo,
         IConfiguration config)
     {
         _sessionRepo = sessionRepo;
@@ -38,6 +40,7 @@ public class HackathonService : IHackathonService
         _scaffoldRepo = scaffoldRepo;
         _fileRepo = fileRepo;
         _folderRepo = folderRepo;
+        _scheduleRepo = scheduleRepo;
         _config = config;
     }
 
@@ -55,6 +58,126 @@ public class HackathonService : IHackathonService
             remaining = Math.Max(0, (int)(session.ExpiresAt.Value - DateTimeHelper.Now).TotalMinutes);
         }
 
+        // Get schedule info
+        ScheduleInfoDto? scheduleInfo = null;
+        try
+        {
+            var schedule = await _scheduleRepo.GetActiveScheduleAsync();
+            if (schedule != null)
+            {
+                var now = DateTimeHelper.Now;
+
+                // Only apply schedule if no date is set (applies every day) or date matches today
+                var scheduleApplies = !schedule.ScheduleDate.HasValue
+                    || schedule.ScheduleDate.Value.Date == now.Date;
+
+                // If date is set but doesn't match today — block
+                if (schedule.ScheduleDate.HasValue && schedule.ScheduleDate.Value.Date != now.Date)
+                {
+                    scheduleInfo = new ScheduleInfoDto
+                    {
+                        SessionStartTime = schedule.SessionStartTime,
+                        SessionEndTime = schedule.SessionEndTime,
+                        ExtensionMinutes = schedule.ExtensionMinutes,
+                        IsWrongDate = true,
+                        ScheduleDate = schedule.ScheduleDate.Value.ToString("yyyy-MM-dd"),
+                        Alerts = ParseAlertConfig(schedule.AlertConfig),
+                        Breaks = schedule.Breaks.Select(b => new BreakInfoDto { Title = b.Title, StartTime = b.StartTime, EndTime = b.EndTime }).ToList()
+                    };
+                }
+                else if (scheduleApplies)
+                {
+                var currentTime = now.ToString("HH:mm");
+
+                // Calculate effective end time with extension
+                var endTimeParts = schedule.SessionEndTime.Split(':');
+                var effectiveEnd = new DateTime(now.Year, now.Month, now.Day,
+                    int.Parse(endTimeParts[0]), int.Parse(endTimeParts[1]), 0)
+                    .AddMinutes(schedule.ExtensionMinutes);
+
+                // Check if before start time
+                bool isBeforeStart = string.Compare(currentTime, schedule.SessionStartTime) < 0;
+
+                // Check if after end time
+                bool isAfterEnd = now > effectiveEnd;
+
+                // If individual session has a later ExpiresAt (admin extended), respect that
+                if (isAfterEnd && session.ExpiresAt.HasValue && session.ExpiresAt.Value > now)
+                {
+                    isAfterEnd = false;
+                }
+
+                // Check if currently in a break
+                bool isInBreak = false;
+                string? currentBreakTitle = null;
+                string? breakEndsAt = null;
+
+                if (!isBeforeStart && !isAfterEnd)
+                {
+                    foreach (var b in schedule.Breaks)
+                    {
+                        if (string.Compare(currentTime, b.StartTime) >= 0 && string.Compare(currentTime, b.EndTime) < 0)
+                        {
+                            isInBreak = true;
+                            currentBreakTitle = b.Title;
+                            breakEndsAt = b.EndTime;
+                            break;
+                        }
+                    }
+                }
+
+                // Check if session has ended based on schedule
+                if (isAfterEnd && session.IsActive)
+                {
+                    isExpired = true;
+                    remaining = 0;
+                }
+                else if (!isExpired && !isBeforeStart)
+                {
+                    // Use the later of schedule end or session ExpiresAt for remaining calculation
+                    var effectiveEndForRemaining = effectiveEnd;
+                    if (session.ExpiresAt.HasValue && session.ExpiresAt.Value > effectiveEnd)
+                        effectiveEndForRemaining = session.ExpiresAt.Value;
+
+                    var scheduleRemaining = (int)(effectiveEndForRemaining - now).TotalMinutes;
+                    // Subtract remaining break time
+                    foreach (var b in schedule.Breaks)
+                    {
+                        if (string.Compare(currentTime, b.StartTime) < 0)
+                        {
+                            var bStart = TimeSpan.Parse(b.StartTime);
+                            var bEnd = TimeSpan.Parse(b.EndTime);
+                            scheduleRemaining -= (int)(bEnd - bStart).TotalMinutes;
+                        }
+                    }
+                    if (remaining == null || scheduleRemaining < remaining)
+                        remaining = Math.Max(0, scheduleRemaining);
+                }
+
+                scheduleInfo = new ScheduleInfoDto
+                {
+                    SessionStartTime = schedule.SessionStartTime,
+                    SessionEndTime = effectiveEnd.ToString("HH:mm"),
+                    ExtensionMinutes = schedule.ExtensionMinutes,
+                    IsInBreak = isInBreak,
+                    IsBeforeStart = isBeforeStart,
+                    IsAfterEnd = isAfterEnd,
+                    CurrentBreakTitle = currentBreakTitle,
+                    BreakEndsAt = breakEndsAt,
+                    ScheduleDate = schedule.ScheduleDate?.ToString("yyyy-MM-dd"),
+                    Alerts = ParseAlertConfig(schedule.AlertConfig),
+                    Breaks = schedule.Breaks.Select(b => new BreakInfoDto
+                    {
+                        Title = b.Title,
+                        StartTime = b.StartTime,
+                        EndTime = b.EndTime
+                    }).ToList()
+                };
+                }
+            }
+        }
+        catch { /* Schedule not configured — ignore */ }
+
         return new SessionStatusDto
         {
             IsActive = session.IsActive && !isExpired,
@@ -64,7 +187,8 @@ public class HackathonService : IHackathonService
             SubmittedAt = session.SubmittedAt,
             DatabaseName = session.DatabaseName,
             ExpiresAt = session.ExpiresAt,
-            RemainingMinutes = remaining
+            RemainingMinutes = remaining,
+            Schedule = scheduleInfo
         };
     }
 
@@ -386,5 +510,20 @@ public class HackathonService : IHackathonService
         var random = new Random();
         return new string(Enumerable.Range(0, 20).Select(_ => chars[random.Next(chars.Length)]).ToArray());
     }
+
+    private static List<AlertConfigItem> ParseAlertConfig(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new List<AlertConfigItem>();
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<List<AlertConfigItem>>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+        }
+        catch
+        {
+            return new List<AlertConfigItem>();
+        }
+    }
 }
+
 
