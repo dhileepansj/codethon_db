@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="DCView.Hackathon.API/DCView.Hackathon.API.csproj" />
+  <Project Path="DCView.Hackathon.Application/DCView.Hackathon.Application.csproj" />
+  <Project Path="DCView.Hackathon.Domain/DCView.Hackathon.Domain.csproj" />
+  <Project Path="DCView.Hackathon.Infrastructure/DCView.Hackathon.Infrastructure.csproj" />
+  <Project Path="DCView.Hackathon.Shared/DCView.Hackathon.Shared.csproj" />
+</Solution>

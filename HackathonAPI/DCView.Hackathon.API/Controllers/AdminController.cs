@@ -1,0 +1,674 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using DCView.Hackathon.Application.DTOs.Admin;
+using DCView.Hackathon.Application.Interfaces;
+using DCView.Hackathon.Domain.Entities;
+using DCView.Hackathon.Domain.Repositories;
+using DCView.Hackathon.Infrastructure.Data;
+using DCView.Hackathon.Shared.Helpers;
+
+namespace DCView.Hackathon.API.Controllers;
+
+[Route("api/admin")]
+[ApiController]
+[Authorize(Roles = "SuperAdmin")]
+public class AdminController : ControllerBase
+{
+    private readonly IUserService _userService;
+    private readonly ISessionService _sessionService;
+    private readonly IExportService _exportService;
+    private readonly IFileManagerService _fileService;
+    private readonly IAiDetectionService _aiDetectionService;
+    private readonly IHackathonConfigRepository _configRepo;
+    private readonly IConfiguration _configuration;
+
+    public AdminController(
+        IUserService userService,
+        ISessionService sessionService,
+        IExportService exportService,
+        IFileManagerService fileService,
+        IAiDetectionService aiDetectionService,
+        IHackathonConfigRepository configRepo,
+        IConfiguration configuration)
+    {
+        _userService = userService;
+        _sessionService = sessionService;
+        _exportService = exportService;
+        _fileService = fileService;
+        _aiDetectionService = aiDetectionService;
+        _configRepo = configRepo;
+        _configuration = configuration;
+    }
+
+    [HttpGet("dashboard")]
+    public async Task<IActionResult> Dashboard()
+    {
+        var stats = await _sessionService.GetDashboardStatsAsync();
+        return Ok(stats);
+    }
+
+    // ─── User Management ─────────────────────────────────────────
+
+    [HttpGet("users")]
+    public async Task<IActionResult> GetAllUsers()
+    {
+        var users = await _userService.GetAllParticipantsAsync();
+        return Ok(users);
+    }
+
+    [HttpGet("users/{userId}")]
+    public async Task<IActionResult> GetUser(string userId)
+    {
+        var user = await _userService.GetUserByIdAsync(userId);
+        if (user == null) return NotFound(new { message = "User not found" });
+        return Ok(user);
+    }
+
+    [HttpPost("users")]
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.UserID) || string.IsNullOrWhiteSpace(request.Password))
+            return BadRequest(new { message = "UserID and Password are required" });
+
+        var createdBy = User.FindFirst(ClaimTypes.Name)?.Value ?? "SuperAdmin";
+        var user = await _userService.CreateUserAsync(request, createdBy);
+        return CreatedAtAction(nameof(GetUser), new { userId = user.UserID }, user);
+    }
+
+    [HttpPost("users/bulk")]
+    public async Task<IActionResult> BulkCreateUsers([FromBody] List<CreateUserDto> requests)
+    {
+        if (requests == null || requests.Count == 0)
+            return BadRequest(new { message = "At least one user is required" });
+
+        var createdBy = User.FindFirst(ClaimTypes.Name)?.Value ?? "SuperAdmin";
+        var users = await _userService.BulkCreateUsersAsync(requests, createdBy);
+        return Ok(new { message = $"{users.Count()} users created successfully", users });
+    }
+
+    [HttpPut("users/{userId}")]
+    public async Task<IActionResult> UpdateUser(string userId, [FromBody] UpdateUserDto request)
+    {
+        var modifiedBy = User.FindFirst(ClaimTypes.Name)?.Value ?? "SuperAdmin";
+        var success = await _userService.UpdateUserAsync(userId, request, modifiedBy);
+        if (!success) return NotFound(new { message = "User not found" });
+        return Ok(new { message = "User updated successfully" });
+    }
+
+    [HttpDelete("users/{userId}")]
+    public async Task<IActionResult> DeactivateUser(string userId)
+    {
+        var success = await _userService.DeactivateUserAsync(userId);
+        if (!success) return NotFound(new { message = "User not found" });
+        return Ok(new { message = "User deactivated successfully" });
+    }
+
+    [HttpPost("users/{userId}/change-password")]
+    public async Task<IActionResult> ChangeUserPassword(string userId, [FromBody] AdminChangePasswordDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.NewPassword))
+            return BadRequest(new { message = "Password is required" });
+
+        var userRepo = HttpContext.RequestServices.GetRequiredService<IUserRepository>();
+        var user = await userRepo.GetByUserIDAsync(userId);
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        var authService = HttpContext.RequestServices.GetRequiredService<IAuthService>();
+        var adminUserId = User.FindFirst(ClaimTypes.Name)?.Value;
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        await authService.ChangePasswordAsync(user.Id, request.NewPassword, adminUserId, ipAddress);
+
+        // Force user to change on next login
+        user.MustChangePassword = true;
+        user.ModifiedDate = DCView.Hackathon.Shared.Helpers.DateTimeHelper.Now;
+        user.ModifiedBy = adminUserId;
+        await userRepo.UpdateAsync(user);
+
+        return Ok(new { message = $"Password changed for {userId}. User will be asked to change it on next login." });
+    }
+
+    [HttpGet("password-reset-requests")]
+    public async Task<IActionResult> GetPasswordResetRequests()
+    {
+        var userRepo = HttpContext.RequestServices.GetRequiredService<IUserRepository>();
+        var allUsers = await _userService.GetAllParticipantsAsync();
+        var requests = allUsers.Where(u => u.PasswordResetRequested).ToList();
+        return Ok(requests);
+    }
+
+    // ─── Session Management ──────────────────────────────────────
+
+    [HttpPost("sessions/{userId}/activate")]
+    public async Task<IActionResult> ActivateSession(string userId, [FromBody] ActivateSessionDto? request)
+    {
+        var activatedBy = User.FindFirst(ClaimTypes.Name)?.Value ?? "SuperAdmin";
+        var success = await _sessionService.ActivateSessionAsync(userId, request?.DurationMinutes, activatedBy);
+        if (!success) return NotFound(new { message = "User not found" });
+        return Ok(new { message = "Session activated" });
+    }
+
+    [HttpPost("sessions/{userId}/deactivate")]
+    public async Task<IActionResult> DeactivateSession(string userId)
+    {
+        var success = await _sessionService.DeactivateSessionAsync(userId);
+        if (!success) return NotFound(new { message = "User or session not found" });
+        return Ok(new { message = "Session deactivated" });
+    }
+
+    [HttpPost("sessions/{userId}/extend")]
+    public async Task<IActionResult> ExtendSession(string userId, [FromBody] ExtendSessionDto request)
+    {
+        var success = await _sessionService.ExtendSessionAsync(userId, request.AdditionalMinutes);
+        if (!success) return NotFound(new { message = "User or session not found" });
+        return Ok(new { message = $"Session extended by {request.AdditionalMinutes} minutes" });
+    }
+
+    [HttpPost("users/{userId}/reset-db")]
+    public async Task<IActionResult> ResetDatabase(string userId)
+    {
+        var success = await _sessionService.ResetDatabaseAsync(userId);
+        if (!success) return NotFound(new { message = "User/session not found or database not created" });
+        return Ok(new { message = "Database reset successfully. User can create a new one." });
+    }
+
+    // ─── Files & Export ──────────────────────────────────────────
+
+    [HttpGet("users/{userId}/files")]
+    public async Task<IActionResult> GetUserFiles(string userId)
+    {
+        var user = await _userService.GetUserByIdAsync(userId);
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        var files = await _fileService.GetAllFilesByUserIdAsync(user.Id);
+        return Ok(files);
+    }
+
+    [HttpGet("export/{userId}")]
+    public async Task<IActionResult> ExportUser(string userId)
+    {
+        var zipBytes = await _exportService.ExportUserAsync(userId);
+        return File(zipBytes, "application/zip", $"Hackathon_Export_{userId}_{DateTimeHelper.Now:yyyyMMdd}.zip");
+    }
+
+    [HttpGet("export/all")]
+    public async Task<IActionResult> ExportAll()
+    {
+        var zipBytes = await _exportService.ExportAllAsync();
+        return File(zipBytes, "application/zip", $"Hackathon_Export_All_{DateTimeHelper.Now:yyyyMMdd}.zip");
+    }
+
+    // ─── Hackathon Server Config ─────────────────────────────────
+
+    [HttpGet("config/hackathon-server")]
+    public async Task<IActionResult> GetHackathonConfig()
+    {
+        var config = await _configRepo.GetActiveConfigAsync();
+        if (config == null)
+            return Ok(new { configured = false });
+
+        return Ok(new
+        {
+            configured = true,
+            config.ServerName,
+            config.AdminUserId,
+            config.DbPrefix,
+            config.MaxQueryTimeoutSeconds,
+            config.MaxRowsPerPage,
+            config.IsActive
+        });
+    }
+
+    [HttpPost("config/hackathon-server")]
+    public async Task<IActionResult> ConfigureHackathonServer([FromBody] ConfigureServerDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.ServerName) ||
+            string.IsNullOrWhiteSpace(request.AdminUserId) ||
+            string.IsNullOrWhiteSpace(request.AdminPassword))
+            return BadRequest(new { message = "ServerName, AdminUserId, and AdminPassword are required" });
+
+        string encKey = _configuration["Encryption:Key"]!;
+        string encryptedPwd = EncryptionHelper.Encrypt(request.AdminPassword, encKey);
+
+        var config = new HackathonConfig
+        {
+            ServerName = request.ServerName,
+            AdminUserId = request.AdminUserId,
+            AdminPasswordEncrypted = encryptedPwd,
+            DbPrefix = request.DbPrefix ?? "Hackathon_",
+            MaxQueryTimeoutSeconds = request.MaxQueryTimeoutSeconds ?? 30,
+            MaxRowsPerPage = request.MaxRowsPerPage ?? 25,
+            IsActive = true,
+            CreatedBy = User.FindFirst(ClaimTypes.Name)?.Value
+        };
+
+        await _configRepo.CreateOrUpdateAsync(config);
+        return Ok(new { message = "Hackathon server configured successfully" });
+    }
+
+    // ─── AI Detection ────────────────────────────────────────────
+
+    [HttpGet("ai-detection/flagged")]
+    public async Task<IActionResult> GetFlaggedFiles([FromQuery] int minScore = 60)
+    {
+        var flagged = await _aiDetectionService.GetFlaggedAsync(minScore);
+        return Ok(flagged);
+    }
+
+    [HttpGet("ai-detection/user/{userId}")]
+    public async Task<IActionResult> GetUserAiDetectionLogs(string userId)
+    {
+        var user = await _userService.GetUserByIdAsync(userId);
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        var logs = await _aiDetectionService.GetLogsByUserIdAsync(user.Id);
+        return Ok(logs);
+    }
+
+    [HttpGet("ai-detection/settings")]
+    public async Task<IActionResult> GetAiDetectionSettings()
+    {
+        var settings = await _aiDetectionService.GetSettingsAsync();
+        return Ok(settings);
+    }
+
+    [HttpPut("ai-detection/settings")]
+    public async Task<IActionResult> UpdateAiDetectionSettings([FromBody] Application.DTOs.AiDetection.UpdateAiSettingsDto request)
+    {
+        var validModes = new[] { "Block", "AllowAndMark", "Disabled" };
+        if (!validModes.Contains(request.Mode))
+            return BadRequest(new { message = "Mode must be Block, AllowAndMark, or Disabled" });
+
+        if (request.BlockThreshold < 0 || request.BlockThreshold > 100)
+            return BadRequest(new { message = "Threshold must be between 0 and 100" });
+
+        var admin = User.FindFirst(ClaimTypes.Name)?.Value ?? "SuperAdmin";
+        await _aiDetectionService.UpdateGlobalSettingsAsync(request, admin);
+        return Ok(new { message = "AI detection settings updated" });
+    }
+
+    [HttpPut("ai-detection/settings/user/{userId}")]
+    public async Task<IActionResult> SetUserAiOverride(string userId, [FromBody] Application.DTOs.AiDetection.UpdateUserOverrideDto request)
+    {
+        var user = await _userService.GetUserByIdAsync(userId);
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        var admin = User.FindFirst(ClaimTypes.Name)?.Value ?? "SuperAdmin";
+        await _aiDetectionService.SetUserOverrideAsync(user.Id, request, admin);
+        return Ok(new { message = $"AI detection override set for {userId}" });
+    }
+
+    [HttpDelete("ai-detection/settings/user/{userId}")]
+    public async Task<IActionResult> RemoveUserAiOverride(string userId)
+    {
+        var user = await _userService.GetUserByIdAsync(userId);
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        await _aiDetectionService.RemoveUserOverrideAsync(user.Id);
+        return Ok(new { message = $"AI detection override removed for {userId}" });
+    }
+
+    [HttpGet("ai-detection/blocked")]
+    public async Task<IActionResult> GetBlockedSaves([FromQuery] string? status)
+    {
+        if (status == "pending")
+        {
+            var pending = await _aiDetectionService.GetPendingBlockedSavesAsync();
+            return Ok(pending);
+        }
+        var all = await _aiDetectionService.GetAllBlockedSavesAsync();
+        return Ok(all);
+    }
+
+    [HttpGet("ai-detection/blocked/user/{userId}")]
+    public async Task<IActionResult> GetUserBlockedSaves(string userId)
+    {
+        var user = await _userService.GetUserByIdAsync(userId);
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        var blocked = await _aiDetectionService.GetBlockedSavesByUserAsync(user.Id);
+        return Ok(blocked);
+    }
+
+    [HttpPost("ai-detection/blocked/{id}/approve")]
+    public async Task<IActionResult> ApproveBlockedSave(long id, [FromBody] Application.DTOs.AiDetection.ReviewBlockedSaveDto? request)
+    {
+        var admin = User.FindFirst(ClaimTypes.Name)?.Value ?? "SuperAdmin";
+        var success = await _aiDetectionService.ApproveBlockedSaveAsync(id, admin, request?.Remarks);
+        if (!success) return NotFound(new { message = "Blocked save not found or already reviewed" });
+        return Ok(new { message = "Save approved. File content has been saved for the user." });
+    }
+
+    [HttpPost("ai-detection/blocked/{id}/reject")]
+    public async Task<IActionResult> RejectBlockedSave(long id, [FromBody] Application.DTOs.AiDetection.ReviewBlockedSaveDto? request)
+    {
+        var admin = User.FindFirst(ClaimTypes.Name)?.Value ?? "SuperAdmin";
+        var success = await _aiDetectionService.RejectBlockedSaveAsync(id, admin, request?.Remarks);
+        if (!success) return NotFound(new { message = "Blocked save not found or already reviewed" });
+        return Ok(new { message = "Save rejected." });
+    }
+
+    // ─── Submission Management ───────────────────────────────────
+
+    [HttpPost("submissions/{userId}/release")]
+    public async Task<IActionResult> ReleaseSubmission(string userId)
+    {
+        var db = HttpContext.RequestServices.GetRequiredService<HackathonDbContext>();
+        var user = await _userService.GetUserByIdAsync(userId);
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        var session = await db.Sessions.FirstOrDefaultAsync(s => s.UserId == user.Id);
+        if (session == null) return NotFound(new { message = "Session not found" });
+        if (!session.IsSubmitted) return BadRequest(new { message = "User has not submitted yet" });
+
+        session.IsSubmitted = false;
+        session.SubmittedAt = null;
+        await db.SaveChangesAsync();
+
+        return Ok(new { message = $"Submission released for {userId}. User can now edit again." });
+    }
+
+    [HttpGet("submissions/{userId}/files")]
+    public async Task<IActionResult> GetUserSubmissionFiles(string userId)
+    {
+        var db = HttpContext.RequestServices.GetRequiredService<HackathonDbContext>();
+        var user = await _userService.GetUserByIdAsync(userId);
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        var files = await db.SubmissionFiles
+            .Where(f => f.UserId == user.Id)
+            .Select(f => new { f.Id, f.FileName, f.ContentType, f.FileSizeBytes, f.UploadedAt })
+            .ToListAsync();
+
+        return Ok(files);
+    }
+
+    [HttpGet("submissions/files/{fileId}/download")]
+    public async Task<IActionResult> DownloadSubmissionFile(int fileId)
+    {
+        var db = HttpContext.RequestServices.GetRequiredService<HackathonDbContext>();
+        var file = await db.SubmissionFiles.FirstOrDefaultAsync(f => f.Id == fileId);
+        if (file == null) return NotFound(new { message = "File not found" });
+
+        return File(file.FileData, file.ContentType, file.FileName);
+    }
+
+    // ─── Question Paper Management ───────────────────────────────
+
+    [HttpGet("question-paper")]
+    public async Task<IActionResult> GetQuestionPaper()
+    {
+        var db = HttpContext.RequestServices.GetRequiredService<HackathonDbContext>();
+        var paper = await db.QuestionPapers.FirstOrDefaultAsync(q => q.IsActive);
+
+        if (paper == null)
+            return Ok(new { configured = false });
+
+        return Ok(new
+        {
+            configured = true,
+            paper.Id,
+            paper.Title,
+            paper.HtmlContent,
+            paper.ScheduledDate,
+            startTime = paper.StartTime?.ToString(@"hh\:mm"),
+            endTime = paper.EndTime?.ToString(@"hh\:mm"),
+            paper.DurationMinutes,
+            paper.IsActive,
+            paper.CreatedDate,
+            paper.ModifiedDate
+        });
+    }
+
+    [HttpPost("question-paper")]
+    public async Task<IActionResult> SaveQuestionPaper([FromBody] SaveQuestionPaperDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Title))
+            return BadRequest(new { message = "Title is required" });
+
+        if (string.IsNullOrWhiteSpace(request.HtmlContent))
+            return BadRequest(new { message = "Question HTML content is required" });
+
+        var db = HttpContext.RequestServices.GetRequiredService<HackathonDbContext>();
+        var admin = User.FindFirst(ClaimTypes.Name)?.Value ?? "SuperAdmin";
+
+        var existing = await db.QuestionPapers.FirstOrDefaultAsync(q => q.IsActive);
+
+        if (existing != null)
+        {
+            existing.Title = request.Title;
+            existing.HtmlContent = request.HtmlContent;
+            existing.ScheduledDate = request.ScheduledDate;
+            existing.StartTime = !string.IsNullOrEmpty(request.StartTime) ? TimeSpan.Parse(request.StartTime) : null;
+            existing.EndTime = !string.IsNullOrEmpty(request.EndTime) ? TimeSpan.Parse(request.EndTime) : null;
+            existing.DurationMinutes = request.DurationMinutes;
+            existing.ModifiedDate = DateTimeHelper.Now;
+            existing.ModifiedBy = admin;
+            db.QuestionPapers.Update(existing);
+        }
+        else
+        {
+            var paper = new HackathonQuestionPaper
+            {
+                Title = request.Title,
+                HtmlContent = request.HtmlContent,
+                ScheduledDate = request.ScheduledDate,
+                StartTime = !string.IsNullOrEmpty(request.StartTime) ? TimeSpan.Parse(request.StartTime) : null,
+                EndTime = !string.IsNullOrEmpty(request.EndTime) ? TimeSpan.Parse(request.EndTime) : null,
+                DurationMinutes = request.DurationMinutes,
+                IsActive = true,
+                CreatedDate = DateTimeHelper.Now,
+                CreatedBy = admin
+            };
+            db.QuestionPapers.Add(paper);
+        }
+
+        await db.SaveChangesAsync();
+        return Ok(new { message = "Question paper saved successfully" });
+    }
+
+    [HttpPost("question-paper/upload-html")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadQuestionHtml(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "HTML file is required" });
+
+        if (!file.FileName.EndsWith(".html", StringComparison.OrdinalIgnoreCase) &&
+            !file.FileName.EndsWith(".htm", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { message = "Only .html or .htm files are allowed" });
+
+        using var reader = new StreamReader(file.OpenReadStream());
+        var htmlContent = await reader.ReadToEndAsync();
+
+        return Ok(new { htmlContent, fileName = file.FileName });
+    }
+
+    // ─── Security Settings ────────────────────────────────────────
+
+    [HttpGet("security-settings")]
+    public async Task<IActionResult> GetSecuritySettings()
+    {
+        var repo = HttpContext.RequestServices.GetRequiredService<ISecuritySettingsRepository>();
+        var settings = await repo.GetAsync();
+        return Ok(settings);
+    }
+
+    [HttpPut("security-settings")]
+    public async Task<IActionResult> UpdateSecuritySettings([FromBody] UpdateSecuritySettingsDto request)
+    {
+        var repo = HttpContext.RequestServices.GetRequiredService<ISecuritySettingsRepository>();
+        var settings = await repo.GetAsync();
+
+        settings.MinLength = request.MinLength;
+        settings.MaxLength = request.MaxLength;
+        settings.RequireUppercase = request.RequireUppercase;
+        settings.RequireLowercase = request.RequireLowercase;
+        settings.RequireDigit = request.RequireDigit;
+        settings.RequireSpecialChar = request.RequireSpecialChar;
+        settings.PasswordHistoryCount = request.PasswordHistoryCount;
+        settings.MaxFailedLoginAttempts = request.MaxFailedLoginAttempts;
+        settings.LockoutDurationMinutes = request.LockoutDurationMinutes;
+        settings.PasswordExpiryDays = request.PasswordExpiryDays;
+        settings.MaxConcurrentSessions = request.MaxConcurrentSessions;
+        settings.ModifiedDate = DateTimeHelper.Now;
+        settings.ModifiedBy = User.FindFirst(ClaimTypes.Name)?.Value;
+
+        await repo.UpdateAsync(settings);
+        return Ok(new { message = "Security settings updated" });
+    }
+
+    [HttpGet("password-change-logs")]
+    public async Task<IActionResult> GetPasswordChangeLogs([FromQuery] string? userId)
+    {
+        var logRepo = HttpContext.RequestServices.GetRequiredService<IPasswordChangeLogRepository>();
+        var userRepo = HttpContext.RequestServices.GetRequiredService<IUserRepository>();
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            var user = await userRepo.GetByUserIDAsync(userId);
+            if (user == null) return NotFound(new { message = "User not found" });
+            var logs = await logRepo.GetByUserIdAsync(user.Id, 50);
+            return Ok(logs.Select(l => new
+            {
+                l.Id,
+                l.UserId,
+                loginId = userId,
+                l.ChangedBy,
+                l.ChangedByUserId,
+                l.ChangedAt,
+                l.IpAddress
+            }));
+        }
+
+        // Return all users' recent changes (last 100)
+        var users = await userRepo.GetAllParticipantsAsync();
+        var allLogs = new List<object>();
+        foreach (var u in users)
+        {
+            var logs = await logRepo.GetByUserIdAsync(u.Id, 5);
+            allLogs.AddRange(logs.Select(l => new
+            {
+                l.Id,
+                l.UserId,
+                loginId = u.UserID,
+                fullName = u.FullName,
+                l.ChangedBy,
+                l.ChangedByUserId,
+                l.ChangedAt,
+                l.IpAddress
+            }));
+        }
+        return Ok(allLogs.OrderByDescending(l => ((dynamic)l).ChangedAt).Take(100));
+    }
+
+    // ─── Scaffold Scripts ─────────────────────────────────────────
+
+    [HttpGet("scaffold-scripts")]
+    public async Task<IActionResult> GetScaffoldScripts()
+    {
+        var repo = HttpContext.RequestServices.GetRequiredService<IScaffoldScriptRepository>();
+        var scripts = await repo.GetAllAsync();
+        return Ok(scripts);
+    }
+
+    [HttpPost("scaffold-scripts")]
+    public async Task<IActionResult> CreateScaffoldScript([FromBody] CreateScaffoldScriptDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.SqlContent))
+            return BadRequest(new { message = "Title and SQL content are required" });
+
+        var repo = HttpContext.RequestServices.GetRequiredService<IScaffoldScriptRepository>();
+        var script = new ScaffoldScript
+        {
+            Title = request.Title.Trim(),
+            FileName = request.FileName?.Trim() ?? $"{request.Title.Trim()}.sql",
+            SqlContent = request.SqlContent,
+            ExecutionOrder = request.ExecutionOrder,
+            IsActive = true,
+            CreatedDate = DateTimeHelper.Now,
+            CreatedBy = User.FindFirst(ClaimTypes.Name)?.Value
+        };
+        await repo.CreateAsync(script);
+        return Ok(script);
+    }
+
+    [HttpPut("scaffold-scripts/{id:int}")]
+    public async Task<IActionResult> UpdateScaffoldScript(int id, [FromBody] CreateScaffoldScriptDto request)
+    {
+        var repo = HttpContext.RequestServices.GetRequiredService<IScaffoldScriptRepository>();
+        var script = await repo.GetByIdAsync(id);
+        if (script == null) return NotFound(new { message = "Script not found" });
+
+        if (!string.IsNullOrWhiteSpace(request.Title)) script.Title = request.Title.Trim();
+        if (!string.IsNullOrWhiteSpace(request.FileName)) script.FileName = request.FileName.Trim();
+        if (!string.IsNullOrWhiteSpace(request.SqlContent)) script.SqlContent = request.SqlContent;
+        script.ExecutionOrder = request.ExecutionOrder;
+        script.IsActive = request.IsActive;
+        script.ModifiedDate = DateTimeHelper.Now;
+        script.ModifiedBy = User.FindFirst(ClaimTypes.Name)?.Value;
+
+        await repo.UpdateAsync(script);
+        return Ok(script);
+    }
+
+    [HttpDelete("scaffold-scripts/{id:int}")]
+    public async Task<IActionResult> DeleteScaffoldScript(int id)
+    {
+        var repo = HttpContext.RequestServices.GetRequiredService<IScaffoldScriptRepository>();
+        await repo.DeleteAsync(id);
+        return Ok(new { message = "Script deleted" });
+    }
+}
+
+public class ConfigureServerDto
+{
+    public string ServerName { get; set; } = string.Empty;
+    public string AdminUserId { get; set; } = string.Empty;
+    public string AdminPassword { get; set; } = string.Empty;
+    public string? DbPrefix { get; set; }
+    public int? MaxQueryTimeoutSeconds { get; set; }
+    public int? MaxRowsPerPage { get; set; }
+}
+
+public class AdminChangePasswordDto
+{
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public class SaveQuestionPaperDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string HtmlContent { get; set; } = string.Empty;
+    public DateTime? ScheduledDate { get; set; }
+    public string? StartTime { get; set; }
+    public string? EndTime { get; set; }
+    public int? DurationMinutes { get; set; }
+}
+
+public class UpdateSecuritySettingsDto
+{
+    public int MinLength { get; set; } = 8;
+    public int MaxLength { get; set; } = 64;
+    public bool RequireUppercase { get; set; } = true;
+    public bool RequireLowercase { get; set; } = true;
+    public bool RequireDigit { get; set; } = true;
+    public bool RequireSpecialChar { get; set; } = true;
+    public int PasswordHistoryCount { get; set; } = 5;
+    public int MaxFailedLoginAttempts { get; set; } = 5;
+    public int LockoutDurationMinutes { get; set; } = 15;
+    public int PasswordExpiryDays { get; set; } = 0;
+    public int MaxConcurrentSessions { get; set; } = 1;
+}
+
+public class CreateScaffoldScriptDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string? FileName { get; set; }
+    public string SqlContent { get; set; } = string.Empty;
+    public int ExecutionOrder { get; set; } = 1;
+    public bool IsActive { get; set; } = true;
+}
+
