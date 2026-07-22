@@ -11,7 +11,7 @@ export interface LoginResponse {
   fullName?: string;
   mustChangePassword: boolean;
   dbEnginePreference?: "SqlServer" | "Oracle";
-  assessmentType?: "SQL" | "MCQ";
+  assessmentType?: "SQL" | "MCQ" | "ManualTesting";
   assessmentSubType?: string;
   assessmentId?: number;
   permissions?: AdminPermissions;
@@ -184,7 +184,7 @@ export interface UserDto {
   lastLoginAt?: string;
   loginCount: number;
   dbEnginePreference?: "SqlServer" | "Oracle";
-  assessmentType?: "SQL" | "MCQ";
+  assessmentType?: "SQL" | "MCQ" | "ManualTesting";
   assessmentTitle?: string;
   assessmentSubType?: string;
   assessmentId?: number;
@@ -229,7 +229,7 @@ export interface ApiResponse<T> {
 export interface McqAssessment {
   id: number;
   title: string;
-  type: "SQL" | "MCQ";
+  type: "SQL" | "MCQ" | "ManualTesting";
   subType: string;
   durationMinutes?: number;
   totalQuestions: number;
