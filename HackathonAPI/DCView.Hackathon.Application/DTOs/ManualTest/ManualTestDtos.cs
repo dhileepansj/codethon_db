@@ -5,11 +5,11 @@ namespace DCView.Hackathon.Application.DTOs.ManualTest;
 public class ManualTestScenarioDto
 {
     public int Id { get; set; }
+    public int SNo { get; set; }
     public string ScenarioId { get; set; } = string.Empty;
     public string? Scenario { get; set; }
     public string? Description { get; set; }
     public string? MustTest { get; set; }
-    public string? PassFail { get; set; }
     public int SortOrder { get; set; }
     public int TestCaseCount { get; set; }
 }
@@ -17,11 +17,11 @@ public class ManualTestScenarioDto
 public class SaveScenarioDto
 {
     public int? Id { get; set; }
+    public int SNo { get; set; }
     public string ScenarioId { get; set; } = string.Empty;
     public string? Scenario { get; set; }
     public string? Description { get; set; }
     public string? MustTest { get; set; }
-    public string? PassFail { get; set; }
     public int SortOrder { get; set; }
 }
 
@@ -31,28 +31,28 @@ public class ManualTestCaseDto
 {
     public int Id { get; set; }
     public int ScenarioDbId { get; set; }
+    public int SNo { get; set; }
+    public string? ScenarioId { get; set; }
     public string TestCaseId { get; set; } = string.Empty;
+    public string? TestCaseDescription { get; set; }
     public string StepNo { get; set; } = string.Empty;
     public string? InputSpecification { get; set; }
-    public string? HelpRemarks { get; set; }
     public string? InputTestData { get; set; }
     public string? ExpectedResult { get; set; }
-    public string? ActualResult { get; set; }
-    public string? StepResult { get; set; }
     public int SortOrder { get; set; }
 }
 
 public class SaveTestCaseDto
 {
     public int? Id { get; set; }
+    public int SNo { get; set; }
+    public string? ScenarioId { get; set; }
     public string TestCaseId { get; set; } = string.Empty;
+    public string? TestCaseDescription { get; set; }
     public string StepNo { get; set; } = string.Empty;
     public string? InputSpecification { get; set; }
-    public string? HelpRemarks { get; set; }
     public string? InputTestData { get; set; }
     public string? ExpectedResult { get; set; }
-    public string? ActualResult { get; set; }
-    public string? StepResult { get; set; }
     public int SortOrder { get; set; }
 }
 

@@ -81,7 +81,7 @@ export default function ManualTestWorkspacePage() {
     const newId = `SC_${String(nextNum).padStart(3, "0")}`;
     try {
       const res = await manualTestService.saveScenario({ scenarioId: newId, sortOrder: nextNum });
-      const newScenario: ScenarioDto = { id: res.id, scenarioId: newId, sortOrder: nextNum, testCaseCount: 0 };
+      const newScenario: ScenarioDto = { id: res.id, sNo: nextNum, scenarioId: newId, sortOrder: nextNum, testCaseCount: 0 };
       setScenarios((prev) => [...prev, newScenario]);
       setSelectedScenario(newScenario);
       setTestCases([]);
@@ -115,7 +115,7 @@ export default function ManualTestWorkspacePage() {
     const tcId = `${selectedScenario.scenarioId}-${stepNo}`;
     try {
       const res = await manualTestService.saveTestCase({ scenarioDbId: selectedScenario.id, testCaseId: tcId, stepNo, sortOrder: nextStep });
-      setTestCases((prev) => [...prev, { id: res.id, scenarioDbId: selectedScenario.id, testCaseId: tcId, stepNo, sortOrder: nextStep }]);
+      setTestCases((prev) => [...prev, { id: res.id, scenarioDbId: selectedScenario.id, sNo: nextStep, testCaseId: tcId, stepNo, sortOrder: nextStep }]);
     } catch { toast.error("Failed to add test case"); }
   };
 
@@ -235,37 +235,39 @@ export default function ManualTestWorkspacePage() {
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="bg-gray-50 dark:bg-gray-800 text-left">
+                              <th className="px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase w-12">S.No</th>
                               <th className="px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase w-16">Step</th>
-                              <th className="px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase">Input Specification</th>
-                              <th className="px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase w-32">Test Data</th>
+                              <th className="px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase w-40">Test Case Description</th>
+                              <th className="px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase">Test Step / Input Specification</th>
+                              <th className="px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase w-36">Input/Test Data</th>
                               <th className="px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase">Expected Result</th>
-                              <th className="px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase w-20">Result</th>
                               <th className="px-3 py-2 w-8"></th>
                             </tr>
                           </thead>
                           <tbody className="divide-y dark:divide-gray-800">
-                            {testCases.map((tc) => (
+                            {testCases.map((tc, idx) => (
                               <tr key={tc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                <td className="px-3 py-1.5">
+                                  <span className="text-[10px] font-mono text-gray-400">{idx + 1}</span>
+                                </td>
                                 <td className="px-3 py-1.5">
                                   <span className="text-[10px] font-mono text-gray-400">{tc.stepNo}</span>
                                 </td>
                                 <td className="px-3 py-1.5">
-                                  <input value={tc.inputSpecification || ""} onChange={(e) => updateTestCase(tc.id, "inputSpecification", e.target.value)} placeholder="What is being tested"
+                                  <input value={(tc as any).testCaseDescription || ""} onChange={(e) => updateTestCase(tc.id, "testCaseDescription", e.target.value)} placeholder="Test case description"
                                     className="w-full px-2 py-1 border dark:border-gray-700 rounded text-xs dark:bg-gray-800 dark:text-white" />
                                 </td>
                                 <td className="px-3 py-1.5">
-                                  <input value={tc.inputTestData || ""} onChange={(e) => updateTestCase(tc.id, "inputTestData", e.target.value)} placeholder="Data"
+                                  <input value={tc.inputSpecification || ""} onChange={(e) => updateTestCase(tc.id, "inputSpecification", e.target.value)} placeholder="Test step / input specification"
                                     className="w-full px-2 py-1 border dark:border-gray-700 rounded text-xs dark:bg-gray-800 dark:text-white" />
                                 </td>
                                 <td className="px-3 py-1.5">
-                                  <input value={tc.expectedResult || ""} onChange={(e) => updateTestCase(tc.id, "expectedResult", e.target.value)} placeholder="Expected behavior"
+                                  <input value={tc.inputTestData || ""} onChange={(e) => updateTestCase(tc.id, "inputTestData", e.target.value)} placeholder="Input / test data"
                                     className="w-full px-2 py-1 border dark:border-gray-700 rounded text-xs dark:bg-gray-800 dark:text-white" />
                                 </td>
                                 <td className="px-3 py-1.5">
-                                  <select value={tc.stepResult || ""} onChange={(e) => updateTestCase(tc.id, "stepResult", e.target.value)}
-                                    className="w-full px-1.5 py-1 border dark:border-gray-700 rounded text-[10px] dark:bg-gray-800 dark:text-white">
-                                    <option value="">—</option><option value="PASS">PASS</option><option value="FAIL">FAIL</option>
-                                  </select>
+                                  <input value={tc.expectedResult || ""} onChange={(e) => updateTestCase(tc.id, "expectedResult", e.target.value)} placeholder="Expected result"
+                                    className="w-full px-2 py-1 border dark:border-gray-700 rounded text-xs dark:bg-gray-800 dark:text-white" />
                                 </td>
                                 <td className="px-2 py-1.5">
                                   <button onClick={() => deleteTestCase(tc.id)} className="text-red-400 hover:text-red-600 p-0.5 rounded"><Trash2 className="h-3 w-3" /></button>

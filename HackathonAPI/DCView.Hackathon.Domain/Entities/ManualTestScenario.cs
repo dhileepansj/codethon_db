@@ -19,15 +19,18 @@ public class ManualTestScenario
     [Required]
     public int AssessmentId { get; set; }
 
-    /// <summary>Scenario ID entered by participant (e.g., "SC_Login_001")</summary>
-    [Required, MaxLength(100)]
+    /// <summary>S.No (display order)</summary>
+    public int SNo { get; set; } = 1;
+
+    /// <summary>Scenario ID (e.g., "SC_E-Nach Integration_001")</summary>
+    [Required, MaxLength(200)]
     public string ScenarioId { get; set; } = string.Empty;
 
-    /// <summary>Short scenario title</summary>
+    /// <summary>Short scenario title (e.g., "Verify that Mandate API Vendor Display")</summary>
     [MaxLength(500)]
     public string? Scenario { get; set; }
 
-    /// <summary>Detailed description of the scenario</summary>
+    /// <summary>Detailed scenario description</summary>
     public string? Description { get; set; }
 
     /// <summary>Must Test: "Yes" or "No"</summary>

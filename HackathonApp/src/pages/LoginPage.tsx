@@ -81,17 +81,17 @@ export default function LoginPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">NovacCodeLab</h1>
-              <p className="text-teal-200">SQL Challenge Platform</p>
+              <p className="text-teal-200">Hackathon & Assessment Platform</p>
             </div>
           </div>
 
           <h2 className="text-4xl font-bold text-white mb-6 leading-tight">
-            Build, Create, Execute
-            <span className="text-teal-300"> SQL Challenges</span>
+            Code, Test, Prove
+            <span className="text-teal-300"> Your Skills</span>
           </h2>
 
           <p className="text-xl text-gray-300 mb-12 leading-relaxed">
-            Your own SQL Server instance. Full DDL &amp; DML access. Create databases, tables, procedures — everything.
+            A unified platform for SQL hackathons, MCQ assessments, and manual testing challenges — all in one place.
           </p>
 
           <div className="space-y-6">
@@ -100,8 +100,8 @@ export default function LoginPage() {
                 <Zap className="h-6 w-6 text-teal-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Full SQL Server Access</h3>
-                <p className="text-gray-300">CREATE, ALTER, DROP — complete database freedom</p>
+                <h3 className="font-semibold text-lg">SQL & Oracle Hackathons</h3>
+                <p className="text-gray-300">Full DDL/DML access with real database instances</p>
               </div>
             </div>
 
@@ -110,8 +110,8 @@ export default function LoginPage() {
                 <Shield className="h-6 w-6 text-orange-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Monaco SQL Editor</h3>
-                <p className="text-gray-300">Syntax highlighting, multi-batch execution with GO</p>
+                <h3 className="font-semibold text-lg">MCQ Assessments</h3>
+                <p className="text-gray-300">Timed tests with auto-grading and detailed analytics</p>
               </div>
             </div>
 
@@ -120,8 +120,8 @@ export default function LoginPage() {
                 <Database className="h-6 w-6 text-purple-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Real-time Schema Explorer</h3>
-                <p className="text-gray-300">SSMS-like tree view of your database objects</p>
+                <h3 className="font-semibold text-lg">Manual Testing Challenges</h3>
+                <p className="text-gray-300">Write test scenarios and cases from real use cases</p>
               </div>
             </div>
           </div>

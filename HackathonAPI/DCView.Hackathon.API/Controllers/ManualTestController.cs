@@ -40,8 +40,8 @@ public class ManualTestController : ControllerBase
             .OrderBy(s => s.SortOrder)
             .Select(s => new ManualTestScenarioDto
             {
-                Id = s.Id, ScenarioId = s.ScenarioId, Scenario = s.Scenario,
-                Description = s.Description, MustTest = s.MustTest, PassFail = s.PassFail,
+                Id = s.Id, SNo = s.SNo, ScenarioId = s.ScenarioId, Scenario = s.Scenario,
+                Description = s.Description, MustTest = s.MustTest,
                 SortOrder = s.SortOrder, TestCaseCount = s.TestCases.Count
             })
             .ToListAsync();
@@ -72,11 +72,11 @@ public class ManualTestController : ControllerBase
             var scenario = await _db.ManualTestScenarios.FirstOrDefaultAsync(s => s.Id == dto.Id && s.UserId == userId);
             if (scenario == null) return NotFound(new { message = "Scenario not found" });
 
+            scenario.SNo = dto.SNo;
             scenario.ScenarioId = dto.ScenarioId;
             scenario.Scenario = dto.Scenario;
             scenario.Description = dto.Description;
             scenario.MustTest = dto.MustTest;
-            scenario.PassFail = dto.PassFail;
             scenario.SortOrder = dto.SortOrder;
             scenario.ModifiedDate = DateTimeHelper.Now;
             await _db.SaveChangesAsync();
@@ -90,11 +90,11 @@ public class ManualTestController : ControllerBase
             {
                 UserId = userId,
                 AssessmentId = user.Assessment.Id,
+                SNo = dto.SNo,
                 ScenarioId = dto.ScenarioId,
                 Scenario = dto.Scenario,
                 Description = dto.Description,
                 MustTest = dto.MustTest,
-                PassFail = dto.PassFail,
                 SortOrder = dto.SortOrder,
                 CreatedDate = DateTimeHelper.Now
             };
@@ -111,15 +111,18 @@ public class ManualTestController : ControllerBase
     {
         var userId = GetUserId();
         var scenario = await _db.ManualTestScenarios
-            .Include(s => s.TestCases)
             .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId);
         if (scenario == null) return NotFound(new { message = "Scenario not found" });
 
-        _db.ManualTestCases.RemoveRange(scenario.TestCases);
+        // Delete test cases first
+        var testCases = await _db.ManualTestCases.Where(c => c.ScenarioDbId == id).ToListAsync();
+        if (testCases.Count > 0)
+            _db.ManualTestCases.RemoveRange(testCases);
+
         _db.ManualTestScenarios.Remove(scenario);
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "Scenario and its test cases deleted" });
+        return Ok(new { message = $"Scenario deleted with {testCases.Count} test case(s)" });
     }
 
     // ─── Test Cases CRUD ─────────────────────────────────────────
@@ -137,11 +140,12 @@ public class ManualTestController : ControllerBase
             .OrderBy(c => c.SortOrder)
             .Select(c => new ManualTestCaseDto
             {
-                Id = c.Id, ScenarioDbId = c.ScenarioDbId, TestCaseId = c.TestCaseId,
-                StepNo = c.StepNo, InputSpecification = c.InputSpecification,
-                HelpRemarks = c.HelpRemarks, InputTestData = c.InputTestData,
-                ExpectedResult = c.ExpectedResult, ActualResult = c.ActualResult,
-                StepResult = c.StepResult, SortOrder = c.SortOrder
+                Id = c.Id, ScenarioDbId = c.ScenarioDbId, SNo = c.SNo,
+                ScenarioId = c.ScenarioId, TestCaseId = c.TestCaseId,
+                TestCaseDescription = c.TestCaseDescription, StepNo = c.StepNo,
+                InputSpecification = c.InputSpecification,
+                InputTestData = c.InputTestData,
+                ExpectedResult = c.ExpectedResult, SortOrder = c.SortOrder
             })
             .ToListAsync();
 
@@ -161,14 +165,14 @@ public class ManualTestController : ControllerBase
             var tc = await _db.ManualTestCases.FirstOrDefaultAsync(c => c.Id == dto.Id && c.ScenarioDbId == dto.ScenarioDbId);
             if (tc == null) return NotFound(new { message = "Test case not found" });
 
+            tc.SNo = dto.SNo;
+            tc.ScenarioId = dto.ScenarioId;
             tc.TestCaseId = dto.TestCaseId;
+            tc.TestCaseDescription = dto.TestCaseDescription;
             tc.StepNo = dto.StepNo;
             tc.InputSpecification = dto.InputSpecification;
-            tc.HelpRemarks = dto.HelpRemarks;
             tc.InputTestData = dto.InputTestData;
             tc.ExpectedResult = dto.ExpectedResult;
-            tc.ActualResult = dto.ActualResult;
-            tc.StepResult = dto.StepResult;
             tc.SortOrder = dto.SortOrder;
             tc.ModifiedDate = DateTimeHelper.Now;
             await _db.SaveChangesAsync();
@@ -180,14 +184,14 @@ public class ManualTestController : ControllerBase
             var tc = new ManualTestCase
             {
                 ScenarioDbId = dto.ScenarioDbId,
+                SNo = dto.SNo,
+                ScenarioId = dto.ScenarioId,
                 TestCaseId = dto.TestCaseId,
+                TestCaseDescription = dto.TestCaseDescription,
                 StepNo = dto.StepNo,
                 InputSpecification = dto.InputSpecification,
-                HelpRemarks = dto.HelpRemarks,
                 InputTestData = dto.InputTestData,
                 ExpectedResult = dto.ExpectedResult,
-                ActualResult = dto.ActualResult,
-                StepResult = dto.StepResult,
                 SortOrder = dto.SortOrder,
                 CreatedDate = DateTimeHelper.Now
             };
@@ -347,17 +351,18 @@ public class ManualTestController : ControllerBase
             FullName = user.FullName,
             Scenarios = scenarios.Select(s => new ManualTestScenarioDto
             {
-                Id = s.Id, ScenarioId = s.ScenarioId, Scenario = s.Scenario,
-                Description = s.Description, MustTest = s.MustTest, PassFail = s.PassFail,
+                Id = s.Id, SNo = s.SNo, ScenarioId = s.ScenarioId, Scenario = s.Scenario,
+                Description = s.Description, MustTest = s.MustTest,
                 SortOrder = s.SortOrder, TestCaseCount = s.TestCases.Count
             }).ToList(),
             TestCases = scenarios.SelectMany(s => s.TestCases.Select(c => new ManualTestCaseDto
             {
-                Id = c.Id, ScenarioDbId = c.ScenarioDbId, TestCaseId = c.TestCaseId,
-                StepNo = c.StepNo, InputSpecification = c.InputSpecification,
-                HelpRemarks = c.HelpRemarks, InputTestData = c.InputTestData,
-                ExpectedResult = c.ExpectedResult, ActualResult = c.ActualResult,
-                StepResult = c.StepResult, SortOrder = c.SortOrder
+                Id = c.Id, ScenarioDbId = c.ScenarioDbId, SNo = c.SNo,
+                ScenarioId = c.ScenarioId, TestCaseId = c.TestCaseId,
+                TestCaseDescription = c.TestCaseDescription, StepNo = c.StepNo,
+                InputSpecification = c.InputSpecification,
+                InputTestData = c.InputTestData,
+                ExpectedResult = c.ExpectedResult, SortOrder = c.SortOrder
             })).ToList()
         });
     }
@@ -377,19 +382,19 @@ public class ManualTestController : ControllerBase
             return BadRequest(new { message = "No submissions to export" });
 
         var sb = new StringBuilder();
-        sb.AppendLine("User ID,Full Name,Scenario ID,Scenario,Description,Must Test,Pass/Fail,Test Case ID,Step No,Input Specification,Test Data,Expected Result,Actual Result,Step Result");
+        sb.AppendLine("User ID,Full Name,S.No,Scenario ID,Scenario,Scenario Description,Must Test,Test Case ID,Test Case Description,Step No,Test Step / Input Specification,Input/Test Data,Expected Result");
 
         foreach (var s in scenarios)
         {
             if (s.TestCases.Count == 0)
             {
-                sb.AppendLine($"\"{s.User.UserID}\",\"{s.User.FullName ?? ""}\",\"{s.ScenarioId}\",\"{s.Scenario ?? ""}\",\"{s.Description ?? ""}\",\"{s.MustTest ?? ""}\",\"{s.PassFail ?? ""}\",,,,,,");
+                sb.AppendLine($"\"{s.User.UserID}\",\"{s.User.FullName ?? ""}\",{s.SNo},\"{s.ScenarioId}\",\"{s.Scenario ?? ""}\",\"{s.Description ?? ""}\",\"{s.MustTest ?? ""}\",,,,,,");
             }
             else
             {
                 foreach (var tc in s.TestCases.OrderBy(c => c.SortOrder))
                 {
-                    sb.AppendLine($"\"{s.User.UserID}\",\"{s.User.FullName ?? ""}\",\"{s.ScenarioId}\",\"{s.Scenario ?? ""}\",\"{s.Description ?? ""}\",\"{s.MustTest ?? ""}\",\"{s.PassFail ?? ""}\",\"{tc.TestCaseId}\",\"{tc.StepNo}\",\"{tc.InputSpecification ?? ""}\",\"{tc.InputTestData ?? ""}\",\"{tc.ExpectedResult ?? ""}\",\"{tc.ActualResult ?? ""}\",\"{tc.StepResult ?? ""}\"");
+                    sb.AppendLine($"\"{s.User.UserID}\",\"{s.User.FullName ?? ""}\",{tc.SNo},\"{s.ScenarioId}\",\"{s.Scenario ?? ""}\",\"{s.Description ?? ""}\",\"{s.MustTest ?? ""}\",\"{tc.TestCaseId}\",\"{tc.TestCaseDescription ?? ""}\",\"{tc.StepNo}\",\"{tc.InputSpecification ?? ""}\",\"{tc.InputTestData ?? ""}\",\"{tc.ExpectedResult ?? ""}\"");
                 }
             }
         }
@@ -405,14 +410,14 @@ public class SaveTestCaseBatchDto
 {
     public int? Id { get; set; }
     public int ScenarioDbId { get; set; }
+    public int SNo { get; set; }
+    public string? ScenarioId { get; set; }
     public string TestCaseId { get; set; } = string.Empty;
+    public string? TestCaseDescription { get; set; }
     public string StepNo { get; set; } = string.Empty;
     public string? InputSpecification { get; set; }
-    public string? HelpRemarks { get; set; }
     public string? InputTestData { get; set; }
     public string? ExpectedResult { get; set; }
-    public string? ActualResult { get; set; }
-    public string? StepResult { get; set; }
     public int SortOrder { get; set; }
 }
 

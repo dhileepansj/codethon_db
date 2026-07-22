@@ -70,6 +70,7 @@ public class AdminUsersController : ControllerBase
             CanManageScaffoldScripts = request.Permissions.CanManageScaffoldScripts,
             CanManageSecuritySettings = request.Permissions.CanManageSecuritySettings,
             CanManageAiDetection = request.Permissions.CanManageAiDetection,
+            CanManageManualTesting = request.Permissions.CanManageManualTesting,
             CanExportData = request.Permissions.CanExportData,
             CanResetDatabase = request.Permissions.CanResetDatabase,
             CanDeleteUsers = request.Permissions.CanDeleteUsers,
@@ -105,6 +106,7 @@ public class AdminUsersController : ControllerBase
             admin.CanManageScaffoldScripts = request.Permissions.CanManageScaffoldScripts;
             admin.CanManageSecuritySettings = request.Permissions.CanManageSecuritySettings;
             admin.CanManageAiDetection = request.Permissions.CanManageAiDetection;
+            admin.CanManageManualTesting = request.Permissions.CanManageManualTesting;
             admin.CanExportData = request.Permissions.CanExportData;
             admin.CanResetDatabase = request.Permissions.CanResetDatabase;
             admin.CanDeleteUsers = request.Permissions.CanDeleteUsers;
@@ -167,6 +169,7 @@ public class AdminUsersController : ControllerBase
             CanManageScaffoldScripts = a.CanManageScaffoldScripts,
             CanManageSecuritySettings = a.CanManageSecuritySettings,
             CanManageAiDetection = a.CanManageAiDetection,
+            CanManageManualTesting = a.CanManageManualTesting,
             CanExportData = a.CanExportData,
             CanResetDatabase = a.CanResetDatabase,
             CanDeleteUsers = a.CanDeleteUsers

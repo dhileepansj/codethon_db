@@ -10,11 +10,11 @@ export interface ManualTestWorkspace {
 
 export interface ScenarioDto {
   id: number;
+  sNo: number;
   scenarioId: string;
   scenario?: string;
   description?: string;
   mustTest?: string;
-  passFail?: string;
   sortOrder: number;
   testCaseCount: number;
 }
@@ -22,14 +22,14 @@ export interface ScenarioDto {
 export interface TestCaseDto {
   id: number;
   scenarioDbId: number;
+  sNo: number;
+  scenarioId?: string;
   testCaseId: string;
+  testCaseDescription?: string;
   stepNo: string;
   inputSpecification?: string;
-  helpRemarks?: string;
   inputTestData?: string;
   expectedResult?: string;
-  actualResult?: string;
-  stepResult?: string;
   sortOrder: number;
 }
 

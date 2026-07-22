@@ -16,32 +16,32 @@ public class ManualTestCase
     [Required]
     public int ScenarioDbId { get; set; }
 
-    /// <summary>Test Case ID (e.g., "TC-C-StudentInfo-001")</summary>
-    [Required, MaxLength(100)]
+    /// <summary>S.No (row number in the test case table)</summary>
+    public int SNo { get; set; } = 1;
+
+    /// <summary>Scenario ID reference (e.g., "SC_E-Nach Integration_001")</summary>
+    [MaxLength(200)]
+    public string? ScenarioId { get; set; }
+
+    /// <summary>Test Case ID (e.g., "TC-F-E-Nach Integration-001")</summary>
+    [Required, MaxLength(200)]
     public string TestCaseId { get; set; } = string.Empty;
 
-    /// <summary>Step number within the test case (e.g., "001", "002")</summary>
+    /// <summary>Test Case Description</summary>
+    public string? TestCaseDescription { get; set; }
+
+    /// <summary>Step number (e.g., "Step 1", "Step 2")</summary>
     [Required, MaxLength(20)]
     public string StepNo { get; set; } = string.Empty;
 
-    /// <summary>What is being tested (input specification)</summary>
+    /// <summary>Test Step / Input Specification</summary>
     public string? InputSpecification { get; set; }
 
-    /// <summary>Help / remarks for this step</summary>
-    public string? HelpRemarks { get; set; }
-
-    /// <summary>The test data used</summary>
+    /// <summary>Input / Test Data</summary>
     public string? InputTestData { get; set; }
 
-    /// <summary>Expected result description</summary>
+    /// <summary>Expected Result</summary>
     public string? ExpectedResult { get; set; }
-
-    /// <summary>Actual result (if filled)</summary>
-    public string? ActualResult { get; set; }
-
-    /// <summary>Pass/Fail for this step</summary>
-    [MaxLength(20)]
-    public string? StepResult { get; set; }
 
     /// <summary>Display order within the test case</summary>
     public int SortOrder { get; set; } = 0;
