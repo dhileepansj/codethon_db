@@ -39,7 +39,8 @@ public class AuthService : IAuthService
     public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto request)
     {
         // First check participant/superadmin users
-        var user = await _userRepo.GetByUserIDAsync(request.UserID);
+        var loginId = request.UserID.Trim().ToUpper();
+        var user = await _userRepo.GetByUserIDAsync(loginId);
 
         if (user != null && user.IsActive && BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
@@ -87,7 +88,7 @@ public class AuthService : IAuthService
 
         // Check admin users table
         var adminUser = await _dbContext.Set<AdminUser>()
-            .FirstOrDefaultAsync(a => a.UserID == request.UserID && a.IsActive);
+            .FirstOrDefaultAsync(a => a.UserID == loginId && a.IsActive);
 
         if (adminUser != null && BCrypt.Net.BCrypt.Verify(request.Password, adminUser.PasswordHash))
         {
@@ -115,6 +116,7 @@ public class AuthService : IAuthService
                     CanManageScaffoldScripts = adminUser.CanManageScaffoldScripts,
                     CanManageSecuritySettings = adminUser.CanManageSecuritySettings,
                     CanManageAiDetection = adminUser.CanManageAiDetection,
+                    CanManageManualTesting = adminUser.CanManageManualTesting,
                     CanExportData = adminUser.CanExportData,
                     CanResetDatabase = adminUser.CanResetDatabase,
                     CanDeleteUsers = adminUser.CanDeleteUsers

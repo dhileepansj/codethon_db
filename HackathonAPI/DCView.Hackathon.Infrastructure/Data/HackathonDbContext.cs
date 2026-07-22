@@ -28,6 +28,9 @@ public class HackathonDbContext : DbContext
     public DbSet<McqTest> McqTests { get; set; }
     public DbSet<McqAnswer> McqAnswers { get; set; }
     public DbSet<AdminUser> AdminUsers { get; set; }
+    public DbSet<ManualTestScenario> ManualTestScenarios { get; set; }
+    public DbSet<ManualTestCase> ManualTestCases { get; set; }
+    public DbSet<SubmissionAuditLog> SubmissionAuditLogs { get; set; }
 
     public HackathonDbContext(DbContextOptions<HackathonDbContext> options)
         : base(options)
@@ -260,6 +263,33 @@ public class HackathonDbContext : DbContext
         modelBuilder.Entity<AdminUser>(entity =>
         {
             entity.HasIndex(e => e.UserID).IsUnique();
+        });
+
+        // ManualTestScenario
+        modelBuilder.Entity<ManualTestScenario>(entity =>
+        {
+            entity.HasIndex(e => new { e.UserId, e.AssessmentId });
+
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Assessment)
+                  .WithMany()
+                  .HasForeignKey(e => e.AssessmentId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // ManualTestCase
+        modelBuilder.Entity<ManualTestCase>(entity =>
+        {
+            entity.HasIndex(e => e.ScenarioDbId);
+
+            entity.HasOne(e => e.Scenario)
+                  .WithMany(s => s.TestCases)
+                  .HasForeignKey(e => e.ScenarioDbId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { ShieldAlert } from "lucide-react";
+import { toast } from "sonner";
 import { startTabSwitchTracking, stopTabSwitchTracking } from "@/services/activityService";
 import { startDevToolsProtection, stopDevToolsProtection, setOnDevToolsBlocked } from "@/services/devtoolsDetection";
+import { validatePaste, setOnPasteBlocked, registerInternalCopy } from "@/services/clipboardGuard";
 
 interface SecurityShieldProps {
   children: React.ReactNode;
@@ -13,6 +15,8 @@ interface SecurityShieldProps {
   rightClick?: boolean;
   /** Block keyboard shortcuts like F12, Ctrl+Shift+I (handled by devTools protection) */
   keyboardShortcuts?: boolean;
+  /** Block external paste */
+  clipboardGuard?: boolean;
 }
 
 /**
@@ -28,6 +32,7 @@ export default function SecurityShield({
   children,
   tabSwitch = true,
   devTools = true,
+  clipboardGuard = false,
 }: SecurityShieldProps) {
   const [devToolsBlocked, setDevToolsBlocked] = useState(false);
 
@@ -43,6 +48,38 @@ export default function SecurityShield({
       setOnDevToolsBlocked((blocked) => {
         setDevToolsBlocked(blocked);
       });
+    }
+
+    // Clipboard guard — intercept paste on all inputs
+    if (clipboardGuard) {
+      const handleCopy = (e: ClipboardEvent) => {
+        const selection = window.getSelection()?.toString();
+        if (selection) registerInternalCopy(selection);
+      };
+
+      const handlePaste = (e: ClipboardEvent) => {
+        const pastedText = e.clipboardData?.getData("text/plain");
+        if (pastedText && !validatePaste(pastedText)) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+
+      setOnPasteBlocked(() => {
+        toast.error("External paste is not allowed. You can only paste content copied within this page.", { duration: 4000 });
+      });
+
+      document.addEventListener("copy", handleCopy, true);
+      document.addEventListener("cut", handleCopy, true);
+      document.addEventListener("paste", handlePaste, true);
+
+      return () => {
+        if (tabSwitch) stopTabSwitchTracking();
+        if (devTools) stopDevToolsProtection();
+        document.removeEventListener("copy", handleCopy, true);
+        document.removeEventListener("cut", handleCopy, true);
+        document.removeEventListener("paste", handlePaste, true);
+      };
     }
 
     return () => {

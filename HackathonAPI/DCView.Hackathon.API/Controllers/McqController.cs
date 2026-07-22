@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using DCView.Hackathon.Application.DTOs.Mcq;
 using DCView.Hackathon.Application.Interfaces;
 
@@ -43,9 +44,9 @@ public class McqController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Title))
             return BadRequest(new { message = "Title is required" });
 
-        var validTypes = new[] { "SQL", "MCQ" };
+        var validTypes = new[] { "SQL", "MCQ", "ManualTesting" };
         if (!validTypes.Contains(request.Type))
-            return BadRequest(new { message = "Type must be 'SQL' or 'MCQ'" });
+            return BadRequest(new { message = "Type must be 'SQL', 'MCQ', or 'ManualTesting'" });
 
         var admin = User.FindFirst(ClaimTypes.Name)?.Value ?? "SuperAdmin";
         var result = await _mcqService.CreateAssessmentAsync(request, admin);
@@ -135,6 +136,120 @@ public class McqController : ControllerBase
         return Ok(results);
     }
 
+    [HttpGet("assessments/{assessmentId:int}/review/{userLoginId}")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
+    public async Task<IActionResult> GetUserReview(int assessmentId, string userLoginId)
+    {
+        var db = HttpContext.RequestServices.GetRequiredService<DCView.Hackathon.Infrastructure.Data.HackathonDbContext>();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.UserID == userLoginId.ToUpper());
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        var test = await db.McqTests
+            .Include(t => t.Answers).ThenInclude(a => a.Question)
+            .FirstOrDefaultAsync(t => t.UserId == user.Id && t.AssessmentId == assessmentId && t.IsSubmitted);
+
+        if (test == null) return NotFound(new { message = "No submitted test found for this user" });
+
+        var questions = test.Answers.OrderBy(a => a.QuestionIndex).Select(a => new
+        {
+            questionIndex = a.QuestionIndex,
+            question = a.Question.Question,
+            optionA = a.Question.OptionA,
+            optionB = a.Question.OptionB,
+            optionC = a.Question.OptionC,
+            optionD = a.Question.OptionD,
+            correctAnswer = a.Question.CorrectAnswer,
+            selectedAnswer = a.SelectedAnswer,
+            isCorrect = a.IsCorrect,
+            marksAwarded = a.MarksAwarded,
+            complexity = a.Question.Complexity,
+            category = a.Question.Category,
+            explanation = a.Question.Explanation
+        }).ToList();
+
+        return Ok(new
+        {
+            userLoginId = user.UserID,
+            fullName = user.FullName,
+            score = test.Score,
+            maxScore = test.MaxScore,
+            percentage = test.Percentage,
+            correct = test.Correct,
+            wrong = test.Wrong,
+            skipped = test.Skipped,
+            totalQuestions = test.TotalQuestions,
+            timeSpentSeconds = test.TimeSpentSeconds,
+            submittedAt = test.SubmittedAt,
+            passed = test.Passed,
+            questions
+        });
+    }
+
+    [HttpGet("assessments/{assessmentId:int}/respondents")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
+    public async Task<IActionResult> GetRespondents(int assessmentId)
+    {
+        var db = HttpContext.RequestServices.GetRequiredService<DCView.Hackathon.Infrastructure.Data.HackathonDbContext>();
+        var respondents = await db.McqTests
+            .Include(t => t.User)
+            .Where(t => t.AssessmentId == assessmentId && t.IsSubmitted)
+            .OrderBy(t => t.User.UserID)
+            .Select(t => new { userLoginId = t.User.UserID, fullName = t.User.FullName, score = t.Score, maxScore = t.MaxScore, percentage = t.Percentage })
+            .ToListAsync();
+        return Ok(respondents);
+    }
+
+    [HttpGet("assessments/{assessmentId:int}/results/user/{userId}")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
+    public async Task<IActionResult> GetUserDetailedResult(int assessmentId, string userId)
+    {
+        var db = HttpContext.RequestServices.GetRequiredService<DCView.Hackathon.Infrastructure.Data.HackathonDbContext>();
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.UserID == userId.ToUpper());
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        var test = await db.McqTests
+            .Include(t => t.Assessment)
+            .Include(t => t.Answers).ThenInclude(a => a.Question)
+            .FirstOrDefaultAsync(t => t.UserId == user.Id && t.AssessmentId == assessmentId && t.IsSubmitted);
+
+        if (test == null) return NotFound(new { message = "No submitted test found for this user" });
+
+        var result = new
+        {
+            userID = user.UserID,
+            fullName = user.FullName,
+            score = test.Score,
+            maxScore = test.MaxScore,
+            percentage = test.Percentage,
+            correct = test.Correct,
+            wrong = test.Wrong,
+            skipped = test.Skipped,
+            totalQuestions = test.TotalQuestions,
+            passed = test.Passed,
+            startedAt = test.StartedAt,
+            submittedAt = test.SubmittedAt,
+            timeSpentSeconds = test.TimeSpentSeconds,
+            answers = test.Answers.OrderBy(a => a.QuestionIndex).Select(a => new
+            {
+                questionIndex = a.QuestionIndex,
+                question = a.Question.Question,
+                optionA = a.Question.OptionA,
+                optionB = a.Question.OptionB,
+                optionC = a.Question.OptionC,
+                optionD = a.Question.OptionD,
+                correctAnswer = a.Question.CorrectAnswer,
+                selectedAnswer = a.SelectedAnswer,
+                isCorrect = a.IsCorrect,
+                marksAwarded = a.MarksAwarded,
+                complexity = a.Question.Complexity,
+                category = a.Question.Category
+            })
+        };
+
+        return Ok(result);
+    }
+
     [HttpGet("assessments/{assessmentId:int}/results/download")]
     [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<IActionResult> DownloadResults(int assessmentId)
@@ -159,6 +274,61 @@ public class McqController : ControllerBase
         var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
         var assessmentTitle = resultList.FirstOrDefault()?.AssessmentTitle ?? "MCQ";
         return File(bytes, "text/csv", $"MCQ_Results_{assessmentTitle}_{DateTime.Now:yyyyMMdd}.csv");
+    }
+
+    [HttpGet("assessments/{assessmentId:int}/results/download-detailed")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
+    public async Task<IActionResult> DownloadDetailedResults(int assessmentId)
+    {
+        var db = HttpContext.RequestServices.GetRequiredService<DCView.Hackathon.Infrastructure.Data.HackathonDbContext>();
+
+        var tests = await db.McqTests
+            .Include(t => t.User)
+            .Include(t => t.Answers).ThenInclude(a => a.Question)
+            .Where(t => t.AssessmentId == assessmentId && t.IsSubmitted)
+            .OrderBy(t => t.User.UserID)
+            .ToListAsync();
+
+        if (tests.Count == 0)
+            return BadRequest(new { message = "No results to export" });
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("User ID,Full Name,Score,Percentage,Q.No,Question,Selected Answer,Correct Answer,Is Correct,Marks Awarded,Complexity,Category");
+
+        foreach (var test in tests)
+        {
+            foreach (var answer in test.Answers.OrderBy(a => a.QuestionIndex))
+            {
+                var q = answer.Question;
+                var selectedText = answer.SelectedAnswer != null
+                    ? $"{answer.SelectedAnswer}. {GetOptionText(q, answer.SelectedAnswer)}"
+                    : "(Skipped)";
+                var correctText = $"{q.CorrectAnswer}. {GetOptionText(q, q.CorrectAnswer)}";
+
+                sb.AppendLine($"\"{test.User.UserID}\",\"{test.User.FullName ?? ""}\",{test.Score},{test.Percentage},{answer.QuestionIndex},\"{EscapeCsv(q.Question)}\",\"{EscapeCsv(selectedText)}\",\"{EscapeCsv(correctText)}\",{(answer.IsCorrect == true ? "Yes" : answer.IsCorrect == false ? "No" : "Skipped")},{answer.MarksAwarded},\"{q.Complexity}\",\"{q.Category ?? ""}\"");
+            }
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+        var assessment = await db.Set<DCView.Hackathon.Domain.Entities.Assessment>().FindAsync(assessmentId);
+        return File(bytes, "text/csv", $"MCQ_Detailed_{assessment?.Title ?? "MCQ"}_{DateTime.Now:yyyyMMdd}.csv");
+    }
+
+    private static string GetOptionText(DCView.Hackathon.Domain.Entities.McqQuestion q, string option)
+    {
+        return option switch
+        {
+            "A" => q.OptionA,
+            "B" => q.OptionB,
+            "C" => q.OptionC,
+            "D" => q.OptionD,
+            _ => ""
+        };
+    }
+
+    private static string EscapeCsv(string text)
+    {
+        return text.Replace("\"", "\"\"").Replace("\n", " ").Replace("\r", "");
     }
 
     // ═══════════════════════════════════════════════════════════════

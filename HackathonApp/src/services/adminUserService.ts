@@ -23,6 +23,7 @@ export interface AdminPermissionsData {
   canManageScaffoldScripts: boolean;
   canManageSecuritySettings: boolean;
   canManageAiDetection: boolean;
+  canManageManualTesting: boolean;
   canExportData: boolean;
   canResetDatabase: boolean;
   canDeleteUsers: boolean;

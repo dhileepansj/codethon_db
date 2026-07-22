@@ -22,7 +22,9 @@ import ScaffoldScriptsPanel from "@/components/admin/ScaffoldScriptsPanel";
 import SchedulePanel from "@/components/admin/SchedulePanel";
 import McqAssessmentPanel from "@/components/admin/McqAssessmentPanel";
 import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
+import ManualTestSetupPanel from "@/components/admin/ManualTestSetupPanel";
 import { mcqAdminService } from "@/services/mcqService";
+import httpClient from "@/services/httpClient";
 import type { AppDispatch, RootState } from "@/redux/store";
 import type { UserDto, DashboardStats } from "@/types";
 
@@ -35,7 +37,8 @@ type DialogState =
   | { type: "deactivateAll" }
   | { type: "extend"; userId: string }
   | { type: "resetDb"; userId: string }
-  | { type: "deleteUser"; userId: string };
+  | { type: "deleteUser"; userId: string }
+  | { type: "releaseSubmission"; userId: string };
 
 export default function AdminPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -66,6 +69,7 @@ export default function AdminPage() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [showMcqPanel, setShowMcqPanel] = useState(false);
   const [showAdminUsers, setShowAdminUsers] = useState(false);
+  const [showManualTestSetup, setShowManualTestSetup] = useState(false);
 
   const [newUser, setNewUser] = useState({ UserID: "", Password: "", FullName: "", Email: "", DbEnginePreference: "SqlServer", AssessmentId: "" });
   const [serverConfig, setServerConfig] = useState({ ServerName: "", AdminUserId: "", AdminPassword: "", DbPrefix: "Hackathon_", DbEngineType: "SqlServer", OracleServiceName: "", Port: "1521" });
@@ -160,6 +164,15 @@ export default function AdminPage() {
     try { await adminService.deleteUser(userId); toast.success(`User "${userId}" permanently deleted`); setSelectedUser(null); loadData(); } catch (err: any) { toast.error(err.response?.data?.message || "Failed to delete user"); }
   };
 
+  const doReleaseSubmission = async (userId: string, reason: string) => {
+    setDialog({ type: "none" });
+    try {
+      await httpClient.post(`/api/admin/submissions/${userId}/release`, { reason: reason || undefined });
+      toast.success(`Submission released for ${userId}`);
+      loadData();
+    } catch (err: any) { toast.error(err.response?.data?.message || "Failed to release"); }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -218,9 +231,10 @@ export default function AdminPage() {
           {can("canViewMonitoring") && <SidebarItem icon={<ArrowLeftRight className="h-4 w-4" />} label="Tab Switch Logs" active={false} onClick={() => setShowTabSwitchLogs(true)} />}
           {can("canManageSecuritySettings") && <SidebarItem icon={<Key className="h-4 w-4" />} label="Security Settings" active={false} onClick={() => setShowSecuritySettings(true)} />}
           {can("canManageScaffoldScripts") && <SidebarItem icon={<Code className="h-4 w-4" />} label="Scaffold Scripts" active={false} onClick={() => setShowScaffoldScripts(true)} />}
-          {can("canManageSessions") && <SidebarItem icon={<Clock className="h-4 w-4" />} label="Session Schedule" active={false} onClick={() => setShowSchedule(true)} />}
-          {can("canManageHackathonSetup") && <SidebarItem icon={<Calendar className="h-4 w-4" />} label="Hackathon Setup" active={false} onClick={() => setShowHackathonSetup(true)} />}
+          {can("canManageSessions") && <SidebarItem icon={<Clock className="h-4 w-4" />} label="DB Session Schedule" active={false} onClick={() => setShowSchedule(true)} />}
+          {can("canManageHackathonSetup") && <SidebarItem icon={<Calendar className="h-4 w-4" />} label="DB Hackathon Setup" active={false} onClick={() => setShowHackathonSetup(true)} />}
           {can("canManageAssessments") && <SidebarItem icon={<ClipboardList className="h-4 w-4" />} label="MCQ Assessments" active={false} onClick={() => setShowMcqPanel(true)} />}
+          {can("canManageManualTesting") && <SidebarItem icon={<FileSpreadsheet className="h-4 w-4" />} label="Manual Testing" active={false} onClick={() => setShowManualTestSetup(true)} />}
           {can("canManageServerConfig") && <SidebarItem icon={<Settings className="h-4 w-4" />} label="Server Config" active={false} onClick={() => setShowServerConfig(true)} />}
           {isSuperAdmin && <SidebarItem icon={<Shield className="h-4 w-4" />} label="Admin Users" active={false} onClick={() => setShowAdminUsers(true)} />}
         </nav>
@@ -293,6 +307,7 @@ export default function AdminPage() {
                 const activity = activityMap[u.userID];
                 const devtools = devtoolsMap[u.userID] || 0;
                 const isMcq = u.assessmentType === "MCQ";
+                const isManualTest = u.assessmentType === "ManualTesting";
                 return (
                   <tr
                     key={u.id}
@@ -320,10 +335,11 @@ export default function AdminPage() {
                     <td className="px-3 py-3">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
                         isMcq ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300" :
+                        isManualTest ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" :
                         u.dbEnginePreference === "Oracle" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" :
                         "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300"
                       }`}>
-                        {isMcq ? (u.assessmentSubType || "MCQ") : u.dbEnginePreference === "Oracle" ? "Oracle" : "SQL Server"}
+                        {isMcq ? (u.assessmentSubType || "MCQ") : isManualTest ? "Manual Test" : u.dbEnginePreference === "Oracle" ? "Oracle" : "SQL Server"}
                       </span>
                     </td>
                     <td className="px-3 py-3">
@@ -340,6 +356,12 @@ export default function AdminPage() {
                           <span className="text-xs font-mono text-amber-600">{u.mcqProgress.answered}/{u.mcqProgress.totalQuestions} answering</span>
                         ) : (
                           <span className="text-xs text-gray-400">Not started</span>
+                        )
+                      ) : isManualTest ? (
+                        (u.session as any)?.isSubmitted ? (
+                          <span className="text-xs text-green-600 font-medium">Submitted</span>
+                        ) : (
+                          <span className="text-xs text-amber-600">In progress</span>
                         )
                       ) : (
                         u.session?.databaseCreated ? (
@@ -388,8 +410,44 @@ export default function AdminPage() {
                           <IconBtn icon={<Square />} title="Deactivate" color="red" onClick={() => doDeactivate(u.userID)} />
                         )}
                         {u.session?.isActive && <IconBtn icon={<Clock />} title="Extend" color="amber" onClick={() => setDialog({ type: "extend", userId: u.userID })} />}
-                        {!isMcq && u.session?.databaseCreated && <IconBtn icon={<RotateCcw />} title="Reset DB" color="orange" onClick={() => setDialog({ type: "resetDb", userId: u.userID })} />}
-                        <IconBtn icon={<Download />} title="Export" color="blue" onClick={async () => { try { await adminService.exportUser(u.userID); } catch (err: any) { toast.error(err.message || "Nothing to export"); } }} />
+                        {!isMcq && !isManualTest && u.session?.databaseCreated && <IconBtn icon={<RotateCcw />} title="Reset DB" color="orange" onClick={() => setDialog({ type: "resetDb", userId: u.userID })} />}
+                        {u.session?.isSubmitted && <IconBtn icon={<Unlock />} title="Release Submission" color="amber" onClick={() => setDialog({ type: "releaseSubmission", userId: u.userID })} />}
+                        <IconBtn icon={<Download />} title="Export" color="blue" onClick={async () => {
+                          try {
+                            if (isMcq && u.assessmentId) {
+                              const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/mcq/assessments/${u.assessmentId}/results/download`, { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } });
+                              if (!res.ok) { toast.error("No results to export"); return; }
+                              const blob = await res.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement("a"); a.href = url; a.download = `MCQ_Summary_${u.userID}.csv`;
+                              document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
+                            } else if (isManualTest && u.assessmentId) {
+                              const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/manual-test/submissions/${u.assessmentId}/export`, { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } });
+                              if (!res.ok) { toast.error("No submissions to export"); return; }
+                              const blob = await res.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement("a"); a.href = url; a.download = `ManualTest_${u.userID}.csv`;
+                              document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
+                            } else {
+                              await adminService.exportUser(u.userID);
+                            }
+                          } catch (err: any) { toast.error(err.message || "Nothing to export"); }
+                        }} />
+                        {isMcq && u.assessmentId && (
+                          <IconBtn icon={<FileSpreadsheet />} title="Detailed Report" color="indigo" onClick={async () => {
+                            try {
+                              const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/mcq/assessments/${u.assessmentId}/results/download-detailed`, { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } });
+                              if (!res.ok) { toast.error("No detailed results"); return; }
+                              const blob = await res.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement("a"); a.href = url; a.download = `MCQ_Detailed_${u.userID}.csv`;
+                              document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
+                            } catch { toast.error("Download failed"); }
+                          }} />
+                        )}
+                        {isMcq && u.assessmentId && u.mcqProgress?.status === "Submitted" && (
+                          <IconBtn icon={<Eye />} title="Review Answers" color="teal" onClick={() => navigate(`/admin/mcq-review?assessmentId=${u.assessmentId}&user=${u.userID}`)} />
+                        )}
                         <IconBtn icon={<Trash2 />} title="Delete User" color="red" onClick={() => setDialog({ type: "deleteUser", userId: u.userID })} />
                       </div>
                     </td>
@@ -418,7 +476,7 @@ export default function AdminPage() {
       {showCreateModal && (
         <Modal title="Create Participant" onClose={() => setShowCreateModal(false)}>
           <form onSubmit={handleCreateUser} className="space-y-3">
-            <input placeholder="User ID *" value={newUser.UserID} onChange={(e) => setNewUser({ ...newUser, UserID: e.target.value })} required className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
+            <input placeholder="User ID *" value={newUser.UserID} onChange={(e) => setNewUser({ ...newUser, UserID: e.target.value.toUpperCase() })} required className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none uppercase" />
             <input placeholder="Password *" value={newUser.Password} onChange={(e) => setNewUser({ ...newUser, Password: e.target.value })} required className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
             <input placeholder="Full Name" value={newUser.FullName} onChange={(e) => setNewUser({ ...newUser, FullName: e.target.value })} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
             <input placeholder="Email" value={newUser.Email} onChange={(e) => setNewUser({ ...newUser, Email: e.target.value })} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
@@ -457,6 +515,7 @@ export default function AdminPage() {
       {showSchedule && <SchedulePanel onClose={() => setShowSchedule(false)} />}
       {showMcqPanel && <McqAssessmentPanel onClose={() => setShowMcqPanel(false)} />}
       {showAdminUsers && <AdminUsersPanel onClose={() => setShowAdminUsers(false)} />}
+      {showManualTestSetup && <ManualTestSetupPanel onClose={() => setShowManualTestSetup(false)} />}
 
       {showServerConfig && (
         <Modal title="Server Configuration" onClose={() => setShowServerConfig(false)}>
@@ -509,6 +568,7 @@ export default function AdminPage() {
       {dialog.type === "extend" && <InputDialog title="Extend Session" message={`Add time to "${dialog.userId}".`} inputLabel="Additional minutes" inputPlaceholder="e.g., 30" inputType="number" confirmLabel="Extend" allowEmpty={false} onConfirm={(v) => doExtend(dialog.userId, v)} onCancel={() => setDialog({ type: "none" })} />}
       {dialog.type === "resetDb" && <ConfirmDialog title="Reset Database" message={`DROP database for "${dialog.userId}"? This is irreversible.`} confirmLabel="Drop Database" confirmVariant="danger" onConfirm={() => doResetDb(dialog.userId)} onCancel={() => setDialog({ type: "none" })} />}
       {dialog.type === "deleteUser" && <ConfirmDialog title="Delete User Permanently" message={`Permanently delete "${dialog.userId}"? This will DROP their database/schema, delete all their files, execution history, logs, and remove the user. This action cannot be undone.`} confirmLabel="Delete Permanently" confirmVariant="danger" onConfirm={() => doDeleteUser(dialog.userId)} onCancel={() => setDialog({ type: "none" })} />}
+      {dialog.type === "releaseSubmission" && <InputDialog title="Release Submission" message={`Release submission for "${dialog.userId}"? They will be able to edit/retake.`} inputLabel="Reason (optional)" inputPlaceholder="e.g., Accidental submit" confirmLabel="Release" allowEmpty onConfirm={(reason) => doReleaseSubmission(dialog.userId, reason)} onCancel={() => setDialog({ type: "none" })} />}
     </div>
   );
 }

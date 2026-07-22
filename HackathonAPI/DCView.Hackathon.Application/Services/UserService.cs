@@ -49,7 +49,7 @@ public class UserService : IUserService
 
         var user = new User
         {
-            UserID = request.UserID,
+            UserID = request.UserID.Trim().ToUpper(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
             FullName = request.FullName,
             Email = request.Email,
@@ -278,6 +278,7 @@ public class UserService : IUserService
                 IsActive = user.Session.IsActive && (user.Session.ExpiresAt == null || user.Session.ExpiresAt > DateTimeHelper.Now),
                 IsExpired = user.Session.IsActive && user.Session.ExpiresAt.HasValue && user.Session.ExpiresAt < DateTimeHelper.Now,
                 DatabaseCreated = user.Session.DatabaseCreated,
+                IsSubmitted = user.Session.IsSubmitted,
                 DatabaseName = user.Session.DatabaseName,
                 StartedAt = user.Session.StartedAt,
                 ExpiresAt = user.Session.ExpiresAt

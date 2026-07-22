@@ -382,21 +382,65 @@ public class AdminController : ControllerBase
     // ─── Submission Management ───────────────────────────────────
 
     [HttpPost("submissions/{userId}/release")]
-    public async Task<IActionResult> ReleaseSubmission(string userId)
+    public async Task<IActionResult> ReleaseSubmission(string userId, [FromBody] ReleaseSubmissionDto? request)
     {
         var db = HttpContext.RequestServices.GetRequiredService<HackathonDbContext>();
         var user = await _userService.GetUserByIdAsync(userId);
         if (user == null) return NotFound(new { message = "User not found" });
 
-        var session = await db.Sessions.FirstOrDefaultAsync(s => s.UserId == user.Id);
-        if (session == null) return NotFound(new { message = "Session not found" });
-        if (!session.IsSubmitted) return BadRequest(new { message = "User has not submitted yet" });
+        var adminName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "Admin";
+        var assessmentType = user.AssessmentType ?? "SQL";
 
-        session.IsSubmitted = false;
-        session.SubmittedAt = null;
+        // Release session submission (SQL + ManualTesting)
+        var session = await db.Sessions.FirstOrDefaultAsync(s => s.UserId == user.Id);
+        if (session != null && session.IsSubmitted)
+        {
+            session.IsSubmitted = false;
+            session.SubmittedAt = null;
+        }
+
+        // Release MCQ test (reset to allow retake)
+        if (assessmentType == "MCQ" && user.AssessmentId.HasValue)
+        {
+            var mcqTest = await db.McqTests
+                .Include(t => t.Answers)
+                .FirstOrDefaultAsync(t => t.UserId == user.Id && t.AssessmentId == user.AssessmentId && t.IsSubmitted);
+
+            if (mcqTest != null)
+            {
+                // Remove the test and answers so user can retake
+                db.McqAnswers.RemoveRange(mcqTest.Answers);
+                db.McqTests.Remove(mcqTest);
+            }
+        }
+
+        // Audit log
+        db.SubmissionAuditLogs.Add(new Domain.Entities.SubmissionAuditLog
+        {
+            UserId = user.Id,
+            UserLoginId = userId,
+            Action = "Released",
+            AssessmentType = assessmentType,
+            PerformedBy = adminName,
+            Reason = request?.Reason,
+            EventTime = DCView.Hackathon.Shared.Helpers.DateTimeHelper.Now
+        });
+
         await db.SaveChangesAsync();
 
-        return Ok(new { message = $"Submission released for {userId}. User can now edit again." });
+        return Ok(new { message = $"Submission released for {userId}. User can now edit/retake." });
+    }
+
+    [HttpGet("submissions/{userId}/audit")]
+    public async Task<IActionResult> GetSubmissionAudit(string userId)
+    {
+        var db = HttpContext.RequestServices.GetRequiredService<HackathonDbContext>();
+        var logs = await db.SubmissionAuditLogs
+            .Where(l => l.UserLoginId == userId.ToUpper())
+            .OrderByDescending(l => l.EventTime)
+            .Select(l => new { l.Action, l.AssessmentType, l.PerformedBy, l.Reason, l.EventTime })
+            .ToListAsync();
+        return Ok(logs);
     }
 
     [HttpGet("submissions/{userId}/files")]
@@ -815,6 +859,11 @@ public class AddBreakDto
 public class ExtendScheduleDto
 {
     public int Minutes { get; set; }
+}
+
+public class ReleaseSubmissionDto
+{
+    public string? Reason { get; set; }
 }
 
 

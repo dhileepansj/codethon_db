@@ -11,6 +11,8 @@ import AdminPage from "./pages/AdminPage";
 import CreateDatabasePage from "./pages/CreateDatabasePage";
 import McqStartPage from "./pages/McqStartPage";
 import McqTestPage from "./pages/McqTestPage";
+import ManualTestWorkspacePage from "./pages/ManualTestWorkspacePage";
+import McqReviewPage from "./pages/McqReviewPage";
 import SecurityShield from "./components/common/SecurityShield";
 
 const BASEPATH = import.meta.env.VITE_APP_BASEPATH || "/novaccodelab";
@@ -58,6 +60,16 @@ export default function App() {
             }
           />
           <Route
+            path="/admin/mcq-review"
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <McqReviewPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/create-database"
             element={
               <ProtectedRoute>
@@ -82,6 +94,14 @@ export default function App() {
                 <SecurityShield tabSwitch devTools>
                   <McqTestPage />
                 </SecurityShield>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manual-test"
+            element={
+              <ProtectedRoute>
+                <ManualTestWorkspacePage />
               </ProtectedRoute>
             }
           />

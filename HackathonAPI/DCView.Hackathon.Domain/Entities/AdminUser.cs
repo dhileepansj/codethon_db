@@ -47,6 +47,7 @@ public class AdminUser
     public bool CanManageScaffoldScripts { get; set; } = false;
     public bool CanManageSecuritySettings { get; set; } = false;
     public bool CanManageAiDetection { get; set; } = false;
+    public bool CanManageManualTesting { get; set; } = false;
     public bool CanExportData { get; set; } = false;
     public bool CanResetDatabase { get; set; } = false;
     public bool CanDeleteUsers { get; set; } = false;

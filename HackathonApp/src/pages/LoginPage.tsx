@@ -44,6 +44,8 @@ export default function LoginPage() {
         navigate("/admin", { replace: true });
       } else if (data.assessmentType === "MCQ") {
         navigate("/mcq-start", { replace: true });
+      } else if (data.assessmentType === "ManualTesting") {
+        navigate("/manual-test", { replace: true });
       } else if (data.session?.databaseCreated) {
         navigate("/", { replace: true });
       } else {
@@ -155,9 +157,9 @@ export default function LoginPage() {
                 <input
                   type="text"
                   value={formData.UserID}
-                  onChange={(e) => setFormData((p) => ({ ...p, UserID: e.target.value }))}
+                  onChange={(e) => setFormData((p) => ({ ...p, UserID: e.target.value.toUpperCase() }))}
                   placeholder="Enter your user ID"
-                  className="w-full pl-12 pr-4 h-12 border-2 border-teal-200 focus:border-orange-400 focus:ring-orange-400 rounded-xl text-lg outline-none transition-all"
+                  className="w-full pl-12 pr-4 h-12 border-2 border-teal-200 focus:border-orange-400 focus:ring-orange-400 rounded-xl text-lg outline-none transition-all uppercase"
                   required
                 />
               </div>

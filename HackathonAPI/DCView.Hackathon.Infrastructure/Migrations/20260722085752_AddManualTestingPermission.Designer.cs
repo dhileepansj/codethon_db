@@ -3,6 +3,7 @@ using System;
 using DCView.Hackathon.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DCView.Hackathon.Infrastructure.Migrations
 {
     [DbContext(typeof(HackathonDbContext))]
-    partial class HackathonDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260722085752_AddManualTestingPermission")]
+    partial class AddManualTestingPermission
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -416,9 +419,6 @@ namespace DCView.Hackathon.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
-
-                    b.Property<string>("UseCaseHtml")
-                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -1188,47 +1188,6 @@ namespace DCView.Hackathon.Infrastructure.Migrations
                             RequireSpecialChar = true,
                             RequireUppercase = true
                         });
-                });
-
-            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.SubmissionAuditLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("AssessmentType")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<DateTime>("EventTime")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("PerformedBy")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Reason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("UserLoginId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Hackathon_SubmissionAuditLog");
                 });
 
             modelBuilder.Entity("DCView.Hackathon.Domain.Entities.TabSwitchLog", b =>

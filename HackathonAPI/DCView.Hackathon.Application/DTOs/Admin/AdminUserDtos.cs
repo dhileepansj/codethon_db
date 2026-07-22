@@ -25,6 +25,7 @@ public class AdminPermissionsDto
     public bool CanManageScaffoldScripts { get; set; }
     public bool CanManageSecuritySettings { get; set; }
     public bool CanManageAiDetection { get; set; }
+    public bool CanManageManualTesting { get; set; }
     public bool CanExportData { get; set; }
     public bool CanResetDatabase { get; set; }
     public bool CanDeleteUsers { get; set; }

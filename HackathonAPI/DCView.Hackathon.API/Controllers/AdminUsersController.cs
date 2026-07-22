@@ -54,7 +54,7 @@ public class AdminUsersController : ControllerBase
 
         var admin = new AdminUser
         {
-            UserID = request.UserID.Trim(),
+            UserID = request.UserID.Trim().ToUpper(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
             FullName = request.FullName?.Trim(),
             Email = request.Email?.Trim(),

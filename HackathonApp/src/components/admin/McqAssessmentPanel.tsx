@@ -489,14 +489,36 @@ function ResultsView({ assessmentId }: { assessmentId: number }) {
     } catch { toast.error("Download failed"); }
   };
 
+  const handleDetailedDownload = async () => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/mcq/assessments/${assessmentId}/results/download-detailed`,
+        { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } }
+      );
+      if (!res.ok) { toast.error("Download failed"); return; }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `MCQ_Detailed_${assessmentId}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch { toast.error("Download failed"); }
+  };
+
   if (loading) return <p className="text-center text-gray-400 py-8">Loading...</p>;
   if (results.length === 0) return <p className="text-center text-gray-400 py-12">No submissions yet</p>;
 
   return (
     <div className="overflow-auto">
-      <div className="flex justify-end mb-3">
+      <div className="flex justify-end mb-3 gap-2">
         <button onClick={handleDownload} className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700">
-          <Download className="h-4 w-4" /> Download CSV
+          <Download className="h-4 w-4" /> Summary CSV
+        </button>
+        <button onClick={handleDetailedDownload} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
+          <Download className="h-4 w-4" /> Detailed CSV
         </button>
       </div>
       <table className="w-full text-sm">

@@ -29,6 +29,7 @@ export interface AdminPermissions {
   canManageScaffoldScripts: boolean;
   canManageSecuritySettings: boolean;
   canManageAiDetection: boolean;
+  canManageManualTesting: boolean;
   canExportData: boolean;
   canResetDatabase: boolean;
   canDeleteUsers: boolean;
@@ -201,6 +202,7 @@ export interface UserDto {
     isActive: boolean;
     isExpired: boolean;
     databaseCreated: boolean;
+    isSubmitted: boolean;
     databaseName?: string;
     startedAt?: string;
     expiresAt?: string;

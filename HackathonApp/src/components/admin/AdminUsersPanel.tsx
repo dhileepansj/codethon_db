@@ -21,6 +21,7 @@ const PERMISSION_LABELS: { key: keyof AdminPermissionsData; label: string; descr
   { key: "canManageScaffoldScripts", label: "Scaffold Scripts", description: "Upload/edit starter scripts" },
   { key: "canManageSecuritySettings", label: "Security Settings", description: "Password policies, lockout" },
   { key: "canManageAiDetection", label: "AI Detection", description: "Configure AI plagiarism settings" },
+  { key: "canManageManualTesting", label: "Manual Testing", description: "Create/manage manual testing assessments" },
   { key: "canExportData", label: "Export Data", description: "Export participant submissions" },
   { key: "canResetDatabase", label: "Reset Database", description: "Drop and reset participant DBs" },
   { key: "canDeleteUsers", label: "Delete Users", description: "Permanently delete users" },
@@ -30,7 +31,7 @@ const DEFAULT_PERMISSIONS: AdminPermissionsData = {
   canManageUsers: false, canManageSessions: false, canViewMonitoring: false,
   canManageAssessments: false, canViewResults: false, canManageHackathonSetup: false,
   canManageServerConfig: false, canManageScaffoldScripts: false, canManageSecuritySettings: false,
-  canManageAiDetection: false, canExportData: false, canResetDatabase: false, canDeleteUsers: false,
+  canManageAiDetection: false, canManageManualTesting: false, canExportData: false, canResetDatabase: false, canDeleteUsers: false,
 };
 
 export default function AdminUsersPanel({ onClose }: Props) {
@@ -214,8 +215,8 @@ function AdminForm({ admin, onSave }: { admin?: AdminUserData; onSave: () => voi
       <div className="grid grid-cols-2 gap-3">
         <div className={admin ? "col-span-2" : ""}>
           <label className="text-[11px] font-medium text-gray-500 dark:text-gray-400">User ID {!admin && "*"}</label>
-          <input value={form.UserID} onChange={(e) => setForm({ ...form, UserID: e.target.value })} disabled={!!admin} required={!admin}
-            className="w-full mt-1 px-3 py-2 border dark:border-gray-700 rounded-md text-sm dark:bg-gray-800 dark:text-white disabled:opacity-50" />
+          <input value={form.UserID} onChange={(e) => setForm({ ...form, UserID: e.target.value.toUpperCase() })} disabled={!!admin} required={!admin}
+            className="w-full mt-1 px-3 py-2 border dark:border-gray-700 rounded-md text-sm dark:bg-gray-800 dark:text-white disabled:opacity-50 uppercase" />
         </div>
         {!admin && (
           <div>

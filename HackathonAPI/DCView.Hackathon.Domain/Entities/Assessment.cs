@@ -91,6 +91,12 @@ public class Assessment
     /// <summary>Show marks per question to participants during the test</summary>
     public bool ShowMarks { get; set; } = true;
 
+    /// <summary>
+    /// Use case / question content (HTML) for this assessment.
+    /// Used by ManualTesting type. MCQ uses question bank instead.
+    /// </summary>
+    public string? UseCaseHtml { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedDate { get; set; } = DateTime.Now;

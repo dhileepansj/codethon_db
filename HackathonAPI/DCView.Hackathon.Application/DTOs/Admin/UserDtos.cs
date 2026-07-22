@@ -45,6 +45,7 @@ public class SessionSummaryDto
     public bool IsActive { get; set; }
     public bool IsExpired { get; set; }
     public bool DatabaseCreated { get; set; }
+    public bool IsSubmitted { get; set; }
     public string? DatabaseName { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? ExpiresAt { get; set; }

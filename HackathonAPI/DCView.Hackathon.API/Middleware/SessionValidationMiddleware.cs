@@ -7,7 +7,7 @@ namespace DCView.Hackathon.API.Middleware;
 public class SessionValidationMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly string[] ProtectedPaths = { "/api/hackathon", "/api/schema", "/api/files", "/api/history", "/api/activity", "/api/mcq/test" };
+    private static readonly string[] ProtectedPaths = { "/api/hackathon", "/api/schema", "/api/files", "/api/history", "/api/activity", "/api/mcq/test", "/api/manual-test" };
 
     public SessionValidationMiddleware(RequestDelegate next)
     {
@@ -78,6 +78,14 @@ public class SessionValidationMiddleware
         // MCQ test endpoints don't require database creation
         bool isMcqEndpoint = path.StartsWith("/api/mcq");
         if (isMcqEndpoint)
+        {
+            await _next(context);
+            return;
+        }
+
+        // Manual test endpoints don't require database creation
+        bool isManualTestEndpoint = path.StartsWith("/api/manual-test");
+        if (isManualTestEndpoint)
         {
             await _next(context);
             return;
