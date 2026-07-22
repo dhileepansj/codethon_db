@@ -13,7 +13,31 @@ public class UserDto
     public DateTime CreatedDate { get; set; }
     public DateTime? LastLoginAt { get; set; }
     public int LoginCount { get; set; }
+    /// <summary>"SqlServer" or "Oracle"</summary>
+    public string DbEnginePreference { get; set; } = "SqlServer";
+    /// <summary>Assessment type: "SQL" or "MCQ"</summary>
+    public string AssessmentType { get; set; } = "SQL";
+    /// <summary>Assessment title (e.g., "Selenium MCQ Test")</summary>
+    public string? AssessmentTitle { get; set; }
+    /// <summary>Assessment sub-type (e.g., "SqlServer", "Oracle", "Selenium")</summary>
+    public string? AssessmentSubType { get; set; }
+    public int? AssessmentId { get; set; }
+    /// <summary>MCQ test progress info (null for SQL users)</summary>
+    public McqProgressDto? McqProgress { get; set; }
     public SessionSummaryDto? Session { get; set; }
+}
+
+public class McqProgressDto
+{
+    /// <summary>"NotStarted", "InProgress", "Submitted"</summary>
+    public string Status { get; set; } = "NotStarted";
+    public int TotalQuestions { get; set; }
+    public int Answered { get; set; }
+    public decimal? Score { get; set; }
+    public decimal? MaxScore { get; set; }
+    public decimal? Percentage { get; set; }
+    public bool? Passed { get; set; }
+    public DateTime? SubmittedAt { get; set; }
 }
 
 public class SessionSummaryDto
@@ -32,6 +56,10 @@ public class CreateUserDto
     public string Password { get; set; } = string.Empty;
     public string? FullName { get; set; }
     public string? Email { get; set; }
+    /// <summary>"SqlServer" or "Oracle". Defaults to SqlServer.</summary>
+    public string? DbEnginePreference { get; set; }
+    /// <summary>Assessment ID to assign. If set, overrides DbEnginePreference.</summary>
+    public int? AssessmentId { get; set; }
 }
 
 public class UpdateUserDto
@@ -39,6 +67,8 @@ public class UpdateUserDto
     public string? FullName { get; set; }
     public string? Email { get; set; }
     public bool? IsActive { get; set; }
+    /// <summary>"SqlServer" or "Oracle". Null = don't change.</summary>
+    public string? DbEnginePreference { get; set; }
 }
 
 public class ActivateSessionDto

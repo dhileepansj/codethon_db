@@ -13,7 +13,7 @@ namespace DCView.Hackathon.API.Controllers;
 
 [Route("api/admin")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin,Admin")]
 public class AdminController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -103,6 +103,14 @@ public class AdminController : ControllerBase
         var success = await _userService.DeactivateUserAsync(userId);
         if (!success) return NotFound(new { message = "User not found" });
         return Ok(new { message = "User deactivated successfully" });
+    }
+
+    [HttpDelete("users/{userId}/permanent")]
+    public async Task<IActionResult> DeleteUser(string userId)
+    {
+        var success = await _userService.DeleteUserAsync(userId);
+        if (!success) return NotFound(new { message = "User not found" });
+        return Ok(new { message = $"User '{userId}' permanently deleted. Database/schema dropped, all files and logs removed." });
     }
 
     [HttpPost("users/{userId}/change-password")]
@@ -217,6 +225,9 @@ public class AdminController : ControllerBase
             config.DbPrefix,
             config.MaxQueryTimeoutSeconds,
             config.MaxRowsPerPage,
+            dbEngineType = config.DbEngineType.ToString(),
+            config.OracleServiceName,
+            config.Port,
             config.IsActive
         });
     }
@@ -229,6 +240,21 @@ public class AdminController : ControllerBase
             string.IsNullOrWhiteSpace(request.AdminPassword))
             return BadRequest(new { message = "ServerName, AdminUserId, and AdminPassword are required" });
 
+        // Parse engine type
+        var engineType = DCView.Hackathon.Domain.Enums.DbEngineType.SqlServer;
+        if (!string.IsNullOrWhiteSpace(request.DbEngineType))
+        {
+            if (!Enum.TryParse<DCView.Hackathon.Domain.Enums.DbEngineType>(request.DbEngineType, ignoreCase: true, out engineType))
+                return BadRequest(new { message = "DbEngineType must be 'SqlServer' or 'Oracle'" });
+        }
+
+        // Oracle-specific validation
+        if (engineType == DCView.Hackathon.Domain.Enums.DbEngineType.Oracle)
+        {
+            if (string.IsNullOrWhiteSpace(request.OracleServiceName))
+                return BadRequest(new { message = "OracleServiceName is required for Oracle engine" });
+        }
+
         string encKey = _configuration["Encryption:Key"]!;
         string encryptedPwd = EncryptionHelper.Encrypt(request.AdminPassword, encKey);
 
@@ -237,15 +263,18 @@ public class AdminController : ControllerBase
             ServerName = request.ServerName,
             AdminUserId = request.AdminUserId,
             AdminPasswordEncrypted = encryptedPwd,
-            DbPrefix = request.DbPrefix ?? "Hackathon_",
+            DbPrefix = request.DbPrefix ?? (engineType == DCView.Hackathon.Domain.Enums.DbEngineType.Oracle ? "HACK_" : "Hackathon_"),
             MaxQueryTimeoutSeconds = request.MaxQueryTimeoutSeconds ?? 30,
             MaxRowsPerPage = request.MaxRowsPerPage ?? 25,
+            DbEngineType = engineType,
+            OracleServiceName = request.OracleServiceName,
+            Port = request.Port,
             IsActive = true,
             CreatedBy = User.FindFirst(ClaimTypes.Name)?.Value
         };
 
         await _configRepo.CreateOrUpdateAsync(config);
-        return Ok(new { message = "Hackathon server configured successfully" });
+        return Ok(new { message = $"Hackathon server configured successfully (Engine: {engineType})" });
     }
 
     // ─── AI Detection ────────────────────────────────────────────
@@ -718,6 +747,15 @@ public class ConfigureServerDto
     public string? DbPrefix { get; set; }
     public int? MaxQueryTimeoutSeconds { get; set; }
     public int? MaxRowsPerPage { get; set; }
+
+    /// <summary>Database engine: "SqlServer" (default) or "Oracle".</summary>
+    public string? DbEngineType { get; set; }
+
+    /// <summary>Oracle-specific: service name (e.g., "XEPDB1", "ORCL").</summary>
+    public string? OracleServiceName { get; set; }
+
+    /// <summary>Oracle-specific: port number (default 1521).</summary>
+    public int? Port { get; set; }
 }
 
 public class AdminChangePasswordDto

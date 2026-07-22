@@ -1,0 +1,151 @@
+SNo,Question,OptionA,OptionB,OptionC,OptionD,Answer,Complexity,Category
+1,"Which package provides the Playwright Test runner for Node.js?","playwright-core","@playwright/test","selenium-webdriver","jest-playwright-core",B,Simple,Setup
+2,"By default how does Playwright Test launch browsers when tests run from the command line?","Headed mode","Headless mode","Incognito window only","Remote-debugging mode",B,Simple,Setup
+3,"Which method navigates a page to a URL?","page.open()","page.goto()","page.navigate()","page.visit()",B,Simple,Navigation
+4,"Which locator is generally preferred for a button with an accessible name?","page.getByRole('button' { name: 'Submit' })","page.locator('//button[1]')","page.locator('button:nth-child(1)')","page.getByTitle('button')",A,Simple,Locators
+5,"Which locator finds a form control using its associated label text?","getByText()","getByLabel()","getByAltText()","getByTitle()",B,Simple,Locators
+6,"Which locator is best suited to find an input using its placeholder?","getByPlaceholder()","getByRole('placeholder')","getByInput()","getByValue()",A,Simple,Locators
+7,"Which locator finds an element using the configured test-id attribute?","getById()","getByTestId()","getByAttribute()","getByDataId()",B,Simple,Locators
+8,"Which method performs a normal mouse click on a locator?","tapOnly()","press()","click()","trigger()",C,Simple,Actions
+9,"Which method replaces the existing value of an input and enters new text?","type()","fill()","append()","setText()",B,Simple,Actions
+10,"Which method selects a checkbox when it is not already selected?","select()","enable()","check()","toggle()",C,Simple,Actions
+11,"Which method clears a selected checkbox?","uncheck()","clear()","deselect()","reset()",A,Simple,Actions
+12,"Which method selects an option in a native HTML select element?","chooseOption()","selectOption()","pick()","setSelected()",B,Simple,Actions
+13,"Which method returns the rendered inner text of an element?","innerText()","html()","value()","nodeText()",A,Simple,Actions
+14,"Which locator finds an element by its visible text content?","getByText()","getByLabel()","getByAltText()","getByPlaceholder()",A,Simple,Locators
+15,"Which assertion verifies that an element becomes visible?","toExist()","toDisplay()","toBeVisible()","toShow()",C,Simple,Assertions
+16,"Which assertion verifies the text content of a locator?","toHaveText()","toEqualText()","toContainNode()","toMatchLabel()",A,Simple,Assertions
+17,"Which assertion verifies the current page URL?","toHaveURL()","toBeAt()","toMatchPage()","toHaveAddress()",A,Simple,Assertions
+18,"Which assertion verifies the page title?","toHaveTitle()","toMatchTitle()","toBeTitled()","toHaveHeading()",A,Simple,Assertions
+19,"Which method captures a screenshot of the current page?","page.capture()","page.screenshot()","page.snapshot()","page.image()",B,Simple,Screenshots
+20,"Which screenshot option captures the entire scrollable page?","allPage: true","captureAll: true","fullPage: true","scrollPage: true",C,Simple,Screenshots
+21,"What is the primary purpose of a BrowserContext in Playwright?","Compile TypeScript","Provide isolated browser sessions","Generate reports","Start the web server",B,Simple,Contexts
+22,"Which built-in fixture gives a fresh browser tab for a test?","browserName","page","request","workerInfo",B,Simple,Fixtures
+23,"Which hook runs before each test in its scope?","test.beforeAll()","test.beforeEach()","test.setup()","test.preTest()",B,Simple,Hooks
+24,"Which hook runs after each test in its scope?","test.afterEach()","test.afterAll()","test.cleanup()","test.postTest()",A,Simple,Hooks
+25,"Which API groups related tests?","test.group()","test.suite()","test.describe()","test.collection()",C,Simple,Test Organization
+26,"Which annotation prevents a test from running?","test.fail()","test.slow()","test.skip()","test.retry()",C,Simple,Annotations
+27,"Which API temporarily runs only one selected test?","test.focus()","test.only()","test.single()","test.runOne()",B,Simple,Test Organization
+28,"Which API changes the timeout for the current test?","test.setTimeout()","page.setTimeout()","expect.setTimeout()","test.timeoutFor()",A,Simple,Timeouts
+29,"What does test.slow() do by default?","Skips the test","Triples the test timeout","Runs the test serially","Adds one retry",B,Simple,Annotations
+30,"Which CLI flag runs tests with a visible browser window?","--visible","--headed","--browser-ui","--show",B,Simple,CLI
+31,"Which CLI flag opens Playwright UI Mode?","--ui","--viewer","--studio","--interactive",A,Simple,CLI
+32,"Which CLI flag starts Playwright in debug mode?","--inspect","--debug","--pause","--trace",B,Simple,CLI
+33,"Which command starts Playwright's test generator?","npx playwright record","npx playwright codegen","npx playwright generate-test","npx playwright capture",B,Simple,CLI
+34,"Which command opens the generated HTML report?","npx playwright open-report","npx playwright report","npx playwright show-report","npx playwright html",C,Simple,CLI
+35,"Which command opens a saved Playwright trace file?","npx playwright show-trace trace.zip","npx playwright open-trace trace.zip","npx playwright trace trace.zip","npx playwright debug-trace trace.zip",A,Simple,Tracing
+36,"Which browser engines are directly supported by Playwright?","Chromium Firefox and WebKit","Chrome Safari and Internet Explorer","Chromium and Opera only","Firefox and EdgeHTML only",A,Simple,Browsers
+37,"Which file normally contains Playwright Test configuration?","package-lock.json","playwright.config.ts","test.settings.xml","browser.config.json",B,Simple,Configuration
+38,"Which configuration option lets tests use relative URLs such as page.goto('/login')?","rootURL","host","baseURL","startURL",C,Simple,Configuration
+39,"In playwright.config.ts browser-context options such as viewport are commonly placed under which property?","env","use","runtime","browserOptions",B,Simple,Configuration
+40,"Which option sets the browser viewport size?","windowSize","screen","viewport","resolution",C,Simple,Configuration
+41,"Which option loads previously saved cookies and local storage into a context?","sessionFile","storageState","cookieStore","authCache",B,Simple,Authentication
+42,"Which use option controls video recording?","recordVideo","video","captureVideo","movie",B,Simple,Configuration
+43,"Which screenshot setting captures screenshots only when tests fail?","screenshot: 'failed'","screenshot: 'only-on-failure'","screenshot: 'on-error'","screenshot: true",B,Simple,Screenshots
+44,"Which trace setting is commonly recommended for CI troubleshooting without tracing every successful test?","trace: 'always'","trace: 'off'","trace: 'on-first-retry'","trace: 'retain-all'",C,Simple,Tracing
+45,"Which configuration property controls automatic retries?","retryCount","retries","rerun","attempts",B,Simple,Configuration
+46,"Which configuration property controls the maximum number of parallel worker processes?","threads","workers","parallelCount","agents",B,Simple,Parallelism
+47,"Which configuration feature runs the same test suite with different browsers or settings?","Profiles","Projects","Suites","Variants",B,Simple,Projects
+48,"Which CLI option filters tests by title using a regular expression?","--filter","--grep","--match-title","--search",B,Simple,CLI
+49,"Which file names are matched by Playwright Test by default?","Only files named test.js","Files matching *.(test|spec).(js|ts|mjs)","Only files under src","Any JavaScript file",B,Simple,Configuration
+50,"Which config option specifies the directory containing test files?","testsPath","testDir","specRoot","suiteDir",B,Simple,Configuration
+51,"Which method waits for a matching network response?","page.waitForResponse()","page.waitForRequestDone()","page.expectResponse()","page.listenResponse()",A,Simple,Network
+52,"Which event can be used to capture browser console messages?","page.on('log')","page.on('console')","page.on('message')","page.on('stdout')",B,Simple,Events
+53,"Which dialog method confirms an alert confirm or prompt?","dialog.confirm()","dialog.accept()","dialog.ok()","dialog.submit()",B,Simple,Dialogs
+54,"Which dialog method cancels a confirm or prompt?","dialog.cancel()","dialog.reject()","dialog.dismiss()","dialog.close(false)",C,Simple,Dialogs
+55,"What should be registered before clicking a link that opens a popup?","page.waitForEvent('popup')","page.waitForLoadState()","browser.waitForWindow()","context.waitForNavigation()",A,Simple,Events
+56,"Which method creates a new page in an existing BrowserContext?","context.newPage()","browser.newTab()","page.newWindow()","context.openPage()",A,Simple,Contexts
+57,"Which API is designed to locate elements inside an iframe?","page.innerFrame()","page.frameLocator()","page.iframe()","page.locatorFrame()",B,Simple,Frames
+58,"Which locator method selects an element by zero-based position?","index()","nth()","at()","position()",B,Simple,Locators
+59,"Which method returns the number of elements matched by a locator?","length()","size()","count()","total()",C,Simple,Locators
+60,"Which locator filter narrows matches using descendant text?","filter({ hasText: 'Active' })","whereText('Active')","containsText('Active')","matchText('Active')",A,Simple,Locators
+61,"What does locator chaining primarily help with?","Running tests in parallel","Narrowing a search within a matched element","Starting a browser","Creating test data",B,Simple,Locators
+62,"Which option requests an exact text or accessible-name match in many built-in locators?","strict: true","exact: true","full: true","matchAll: false",B,Simple,Locators
+63,"Before locator.click() Playwright normally checks that the element is visible stable enabled receives events and what else?","Has CSS","Resolves to exactly one element","Has text","Is inside a form",B,Simple,Actionability
+64,"What is the main effect of click({ force: true })?","It retries forever","It skips non-essential actionability checks such as whether the element receives events","It uses JavaScript click automatically","It disables strictness for all locators",B,Simple,Actionability
+65,"Which locator method sends a keyboard key such as Enter?","key()","press()","sendKey()","keyboard()",B,Simple,Actions
+66,"Which locator method moves the mouse over an element?","mouseOver()","hover()","focusMouse()","point()",B,Simple,Actions
+67,"Which method uploads one or more files to an input type=file element?","uploadFiles()","setInputFiles()","attach()","chooseFiles()",B,Simple,File Upload
+68,"Which event should be awaited before an action that starts a download?","page.waitForEvent('file')","page.waitForEvent('download')","page.waitForEvent('save')","page.waitForEvent('attachment')",B,Simple,Downloads
+69,"Which Download method saves the downloaded file to a chosen path?","download.moveTo()","download.saveAs()","download.write()","download.export()",B,Simple,Downloads
+70,"Which method closes a Browser instance?","browser.quit()","browser.stop()","browser.close()","browser.disposeAll()",C,Simple,Browser Management
+71,"Which method closes a BrowserContext and all pages in it?","context.close()","context.quit()","context.destroy()","context.end()",A,Simple,Contexts
+72,"Which method refreshes the current page?","page.refresh()","page.reload()","page.restart()","page.reopen()",B,Simple,Navigation
+73,"Which method navigates back in browser history?","page.back()","page.goBack()","page.historyBack()","page.previous()",B,Simple,Navigation
+74,"Which context method adds HTTP headers to requests made by pages in that context?","context.addHeaders()","context.setExtraHTTPHeaders()","context.setHeaders()","context.httpHeaders()",B,Simple,Network
+75,"Which Playwright export provides predefined desktop and mobile device descriptors?","browsers","devices","profiles","emulators",B,Simple,Emulation
+76,"Which context option sets the browser locale?","language","locale","culture","region",B,Simple,Emulation
+77,"Which context option emulates a time zone?","timezone","timezoneId","timeZoneName","zone",B,Simple,Emulation
+78,"Which BrowserContext method grants permissions such as geolocation?","allowPermissions()","grantPermissions()","setPermissions()","enablePermissions()",B,Simple,Emulation
+79,"Which context option provides emulated latitude and longitude?","location","gps","geolocation","coordinates",C,Simple,Emulation
+80,"Which context option allows navigation to sites with invalid HTTPS certificates?","acceptInsecureCerts","ignoreHTTPSErrors","allowBadSSL","skipTLSValidation",B,Simple,Configuration
+81,"What is the purpose of expect.soft()?","Stop immediately on failure","Record an assertion failure and continue the test","Retry a test automatically","Skip an assertion in CI",B,Simple,Assertions
+82,"Which assertion checks that an element is not visible?","expect(locator).not.toBeVisible()","expect(locator).toBeHiddenOnly()","expect(locator).notVisible()","expect(locator).toDisappearNow()",A,Simple,Assertions
+83,"Which method saves the current BrowserContext authentication state to a file?","context.saveSession()","context.storageState({ path })","context.exportCookies()","context.persist()",B,Simple,Authentication
+84,"Which built-in fixture is used for HTTP API calls in Playwright Test?","http","request","api","rest",B,Simple,API Testing
+85,"Which APIRequestContext method sends an HTTP GET request?","request.fetchGet()","request.get()","request.read()","request.sendGet()",B,Simple,API Testing
+86,"Which method indicates whether an APIResponse has a successful HTTP status in the 200-299 range?","response.success()","response.ok()","response.passed()","response.is2xx()",B,Simple,API Testing
+87,"Which page method intercepts matching network requests?","page.mock()","page.route()","page.intercept()","page.handleRequest()",B,Simple,Network
+88,"Which Route method returns a mocked response without contacting the real endpoint?","route.respond()","route.fulfill()","route.mock()","route.complete()",B,Simple,Network
+89,"Which locator method returns the current value of an input textarea or select element?","value()","inputValue()","getValue()","selectedText()",B,Simple,Actions
+90,"Which assertion verifies that a form control is enabled?","toBeEnabled()","toBeActive()","toAllowInput()","toBeEditableOnly()",A,Simple,Assertions
+91,"Which Route method sends an intercepted request to the network optionally with modified properties?","route.continue()","route.forward()","route.resume()","route.dispatch()",A,Medium,Network
+92,"Which Route method can intentionally block a request?","route.cancel()","route.abort()","route.stop()","route.rejectRequest()",B,Medium,Network
+93,"To change request headers while allowing the request to continue which approach is correct?","route.fulfill({ headers })","route.continue({ headers: { ...request.headers() key: 'value' } })","request.setHeaders() after response","page.setHeadersForRoute()",B,Medium,Network
+94,"Which API replays network requests from a HAR file?","page.useHAR()","page.routeFromHAR()","context.playHAR()","request.mockHAR()",B,Medium,Network
+95,"Which method waits until the page URL matches a string glob or regular expression?","page.waitForURL()","page.waitForNavigationTo()","page.expectURL()","page.waitForAddress()",A,Medium,Navigation
+96,"A locator matches two buttons and click() throws a strict mode violation. What is the best first fix?","Use force: true","Refine the locator so it uniquely identifies the intended button","Add a fixed sleep","Use page.evaluate to click the first button",B,Medium,Locators
+97,"Why can locator.all() be flaky on a dynamically loaded list?","It always returns hidden elements","It does not wait for the list to finish loading before returning current matches","It disables auto-waiting globally","It converts locators to ElementHandles",B,Medium,Locators
+98,"Which locator method returns the text content of every matched element as an array?","allTextContents()","textArray()","getTexts()","collectText()",A,Medium,Locators
+99,"What is a key difference between page.evaluate() code and test code?","evaluate() runs in the browser page context","evaluate() runs in a worker thread outside the browser","evaluate() can only execute CSS","evaluate() automatically retries assertions",A,Medium,JavaScript
+100,"Which API exposes a Node.js function on window for every frame in a page?","page.exposeFunction()","page.bindNode()","page.publishFunction()","page.addFunction()",A,Medium,JavaScript
+101,"Which API executes a script before the page's own scripts run on navigation or frame attachment?","page.preload()","page.addInitScript()","page.beforeScript()","page.injectEarly()",B,Medium,JavaScript
+102,"Which statement pauses a test and opens Playwright Inspector when debugging?","await test.pause()","await page.pause()","await browser.pause()","await expect.pause()",B,Medium,Debugging
+103,"Which assertion is designed to repeatedly evaluate a supplied function until it matches an expected value?","expect.poll()","expect.loop()","expect.retry()","expect.eventually()",A,Medium,Assertions
+104,"Which assertion retries a block of code until the block passes or times out?","expect.toPass()","expect.tryAgain()","expect.retryBlock()","expect.runUntil()",A,Medium,Assertions
+105,"How do you override the timeout for one locator assertion?","test.setTimeout inside expect","Pass { timeout: value } to the assertion","Set page.defaultTimeout after the assertion","Use retries: value",B,Medium,Timeouts
+106,"Which object provides runtime details such as retry number project status and output paths?","testInfo","runInfo","workerConfig","suiteInfo",A,Medium,Test Info
+107,"Which testInfo method attaches a file or body to the test result?","testInfo.attach()","testInfo.addFile()","testInfo.embed()","testInfo.reportAsset()",A,Medium,Test Info
+108,"Which built-in annotation runs the test and expects it to fail?","test.fixme()","test.fail()","test.skip()","test.slow()",B,Medium,Annotations
+109,"What must a Playwright test tag start with?","#","@","$",":",B,Medium,Annotations
+110,"What happens after a test fails inside a serial test group?","Remaining tests in the group continue normally","Remaining tests in the group are skipped","Only afterAll is skipped","The whole project stops immediately",B,Medium,Test Organization
+111,"Which setting runs tests inside a single describe block in parallel?","test.describe.configure({ mode: 'parallel' })","test.use({ parallel: true })","test.parallel()","test.setWorkers('file')",A,Medium,Parallelism
+112,"Which config option enables test-level parallelism across all test files?","parallel: true","fullyParallel: true","allParallel: true","workers: 'test'",B,Medium,Parallelism
+113,"Which command divides a suite into the first of three shards?","npx playwright test --shard=1/3","npx playwright test --part=1:3","npx playwright test --split=1/3","npx playwright test --node=1/3",A,Medium,Sharding
+114,"Which reporter is designed to create intermediate report data that can later be merged after sharded runs?","dot","blob","line","list",B,Medium,Reporting
+115,"Why are project dependencies generally preferred over a globalSetup file?","They run without the test runner","They support fixtures traces retries and report visibility","They always run faster","They require no configuration",B,Medium,Projects
+116,"Which config option starts and waits for a local application server before tests?","server","devServer","webServer","applicationHost",C,Medium,Configuration
+117,"Which project property specifies setup projects that must complete first?","requires","dependencies","beforeProjects","setup",B,Medium,Projects
+118,"Which project property names a teardown project that runs after dependent projects?","cleanup","afterAllProject","teardown","finalizer",C,Medium,Projects
+119,"Which fixture scope creates one fixture instance for each test?","suite","test","worker","project",B,Medium,Fixtures
+120,"Which fixture scope creates one fixture instance per worker process?","global","worker","file","browser",B,Medium,Fixtures
+121,"What does an automatic fixture do?","Runs only when explicitly requested","Runs for applicable tests even when it is not listed in the test arguments","Creates a new browser engine","Disables fixture teardown",B,Medium,Fixtures
+122,"How can a slow fixture receive its own timeout?","Set timeout in the fixture options tuple","Use page.setDefaultTimeout()","Set workers to 1","Add test.slow() to the config",A,Medium,Fixtures
+123,"Which API creates a customized test object with additional fixtures?","test.extend()","test.inherit()","test.addFixture()","test.compose()",A,Medium,Fixtures
+124,"Tests modify shared server-side state and run in parallel. What authentication strategy is recommended?","One shared account for all workers","One unique authenticated account per parallel worker","Log in with the same account before each action","Disable browser contexts",B,Medium,Authentication
+125,"What is true about browserContext.request and page.request?","They are disconnected from browser cookies","They share cookie storage with the BrowserContext","They can only send GET requests","They always create a new browser context",B,Medium,API Testing
+126,"When should request.newContext() be used instead of context.request?","When an isolated API request context with separate cookie storage is needed","Only for screenshots","Only inside global teardown","When testing iframes",A,Medium,API Testing
+127,"Why is waitForLoadState('networkidle') generally not the preferred readiness strategy for tests?","It is unsupported by Chromium","Tests should rely on web assertions and application-specific signals rather than a generic absence of network connections","It closes active WebSockets","It disables auto-waiting",B,Medium,Synchronization
+128,"For a single-page application where clicking updates content without a full document navigation what is usually the best synchronization?","A fixed timeout","A web-first assertion on the expected UI state","waitForURL for every click","Reload the page",B,Medium,Synchronization
+129,"After awaiting page.waitForEvent('popup') which object represents the newly opened tab or window?","Browser","BrowserContext","Page","Frame",C,Medium,Events
+130,"How does Playwright generally handle open Shadow DOM when using standard locators?","Standard locators pierce open shadow roots by default","Only XPath pierces shadow roots","Shadow DOM is unsupported","A browser restart is required",A,Medium,Shadow DOM
+131,"In getByRole('button' { name: 'Save' }) what does name refer to?","The HTML name attribute only","The accessible name","The CSS class","The JavaScript variable name",B,Medium,Locators
+132,"Which filter finds an outer locator containing a particular inner locator?","filter({ has: innerLocator })","filter({ child: innerLocator })","contains(innerLocator)","within(innerLocator)",A,Medium,Locators
+133,"Which locator operator matches elements satisfying either of two locators?","locator.union()","locator.or()","locator.either()","locator.plus()",B,Medium,Locators
+134,"Which locator operator narrows a locator to elements also matching another locator?","locator.and()","locator.intersectAll()","locator.both()","locator.merge()",A,Medium,Locators
+135,"Which assertion verifies an ordered list of texts for multiple matched elements?","expect(locator).toHaveText(['A' 'B'])","expect(locator).toEqualList('A B')","expect(locator.all()).toContainText()","expect(locator).toHaveRows(2)",A,Medium,Assertions
+136,"A click triggers an API call immediately. Which pattern avoids missing the response event?","Click first then call waitForResponse()","Start waitForResponse before the click and await both","Add waitForTimeout after the click","Use page.reload before clicking",B,Complex,Network
+137,"Parallel tests create users with the same fixed email and intermittently collide. What is the best design?","Add retries","Generate unique data using worker/test identifiers","Run every click with force","Share one page across all workers",B,Complex,Parallelism
+138,"A dynamically loaded list changes while locator.all() is being used. What is the most reliable approach?","Call locator.all() repeatedly in a tight loop","Wait for an expected stable condition such as item count then call locator.all()","Convert the locator to XPath","Disable strict mode globally",B,Complex,Synchronization
+139,"A test fails and retries are enabled. What happens to the worker process that ran the failed test?","It is always reused","It is discarded and a new worker process is started","Only the page is refreshed","It is paused for manual debugging",B,Complex,Retries
+140,"A test in a file fails the worker is restarted and later tests continue. What happens to beforeAll in the new worker?","It is never run again","It runs again in the new worker","Only afterAll runs","It runs only if fullyParallel is false",B,Complex,Fixtures
+141,"A serial group has three tests; the second fails and one retry is configured. What is retried?","Only the failed assertion","Only the second test","The serial group is retried together from the beginning","The entire repository",C,Complex,Retries
+142,"A locator assertion times out after 5 seconds even though the test timeout is 30 seconds. Why?","Assertion timeout is separate from test timeout","The browser context closed automatically","Retries disable test timeout","The locator is converted to an ElementHandle",A,Complex,Timeouts
+143,"page.route() does not see requests handled by an application's service worker. Which context option is the recommended troubleshooting step?","serviceWorkers: 'block'","offline: true","javaScriptEnabled: false","bypassCSP: true",A,Complex,Network
+144,"You must modify only the body of a real server response while preserving its status and most headers. Which pattern is most appropriate?","route.abort() then request.get()","const response = await route.fetch(); then route.fulfill({ response body })","route.continue({ body })","page.evaluate(() => fetch(...))",B,Complex,Network
+145,"A 900-test suite is split across three machines but shards are uneven because a few files contain many tests. Which configuration most directly improves test-level shard balancing?","fullyParallel: true","workers: 1","retries: 0","trace: 'on'",A,Complex,Sharding
+146,"A setup workflow must appear in the HTML report and produce traces when it fails. Which setup model should be used?","A plain Node.js script executed before npm test","globalSetup only","A setup project used through project dependencies","A beforeEach hook in every file",C,Complex,Projects
+147,"Two authenticated roles must interact in the same test without sharing cookies. What is the correct design?","Use one Page and switch storageState during the test","Create separate BrowserContexts with different storage states","Use two tabs in the same context","Run the roles in serial projects only",B,Complex,Authentication
+148,"Several API responses share the same URL but only one JSON response with status 200 should release the wait. What is the strongest waitForResponse matcher?","A fixed 5-second wait","A predicate checking URL status and relevant response properties","The URL string only","page.waitForLoadState('domcontentloaded')",B,Complex,Network
+149,"A page object should be automatically created for every test and cleaned up consistently. Which Playwright Test design is most suitable?","Instantiate it in every test manually","Provide it through a custom test-scoped fixture created with test.extend()","Store it in a global variable","Create it in globalSetup and reuse one Page",B,Complex,Fixtures
+150,"A shared login state is safe for read-only tests but unsafe for tests that update account settings in parallel. What is the most scalable configuration?","Use one shared storageState for every test","Use worker-scoped authentication with a unique account and storage state per worker","Disable retries","Run all tests in one page",B,Complex,Authentication

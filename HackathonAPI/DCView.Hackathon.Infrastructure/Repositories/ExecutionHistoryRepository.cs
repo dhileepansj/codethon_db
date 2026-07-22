@@ -52,6 +52,13 @@ public class ExecutionHistoryRepository : IExecutionHistoryRepository
         return await _db.ExecutionHistories.CountAsync(e => e.ExecutedAt >= today);
     }
 
+    public async Task DeleteByUserIdAsync(int userId)
+    {
+        var records = await _db.ExecutionHistories.Where(e => e.UserId == userId).ToListAsync();
+        _db.ExecutionHistories.RemoveRange(records);
+        await _db.SaveChangesAsync();
+    }
+
     public async Task SaveChangesAsync(CancellationToken ct = default)
         => await _db.SaveChangesAsync(ct);
 }

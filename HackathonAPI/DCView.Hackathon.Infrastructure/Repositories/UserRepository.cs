@@ -15,11 +15,12 @@ public class UserRepository : IUserRepository
         => await _db.Users.Include(u => u.Session).FirstOrDefaultAsync(u => u.Id == id);
 
     public async Task<User?> GetByUserIDAsync(string userId)
-        => await _db.Users.Include(u => u.Session).FirstOrDefaultAsync(u => u.UserID == userId);
+        => await _db.Users.Include(u => u.Session).Include(u => u.Assessment).FirstOrDefaultAsync(u => u.UserID == userId);
 
     public async Task<IEnumerable<User>> GetAllParticipantsAsync()
         => await _db.Users
             .Include(u => u.Session)
+            .Include(u => u.Assessment)
             .Where(u => u.Role == "Participant")
             .OrderByDescending(u => u.CreatedDate)
             .ToListAsync();
@@ -34,6 +35,12 @@ public class UserRepository : IUserRepository
     public async Task UpdateAsync(User user)
     {
         _db.Users.Update(user);
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(User user)
+    {
+        _db.Users.Remove(user);
         await _db.SaveChangesAsync();
     }
 

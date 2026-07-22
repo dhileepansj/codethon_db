@@ -9,5 +9,6 @@ public interface IExecutionHistoryRepository
     Task<(IEnumerable<ExecutionHistory> Items, int TotalCount)> GetAllAsync(int page, int pageSize);
     Task<int> GetTotalCountByUserIdAsync(int userId);
     Task<int> GetTodayCountAsync();
+    Task DeleteByUserIdAsync(int userId);
     Task SaveChangesAsync(CancellationToken ct = default);
 }

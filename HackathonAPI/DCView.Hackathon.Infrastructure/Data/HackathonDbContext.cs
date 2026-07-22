@@ -23,6 +23,11 @@ public class HackathonDbContext : DbContext
     public DbSet<ScaffoldScript> ScaffoldScripts { get; set; }
     public DbSet<HackathonSchedule> HackathonSchedules { get; set; }
     public DbSet<HackathonBreak> HackathonBreaks { get; set; }
+    public DbSet<Assessment> Assessments { get; set; }
+    public DbSet<McqQuestion> McqQuestions { get; set; }
+    public DbSet<McqTest> McqTests { get; set; }
+    public DbSet<McqAnswer> McqAnswers { get; set; }
+    public DbSet<AdminUser> AdminUsers { get; set; }
 
     public HackathonDbContext(DbContextOptions<HackathonDbContext> options)
         : base(options)
@@ -184,6 +189,77 @@ public class HackathonDbContext : DbContext
                 MaxConcurrentSessions = 1,
                 ModifiedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             });
+        });
+
+        // ─── MCQ Entities ────────────────────────────────────────────
+
+        // Assessment
+        modelBuilder.Entity<Assessment>(entity =>
+        {
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.Type);
+        });
+
+        // McqQuestion
+        modelBuilder.Entity<McqQuestion>(entity =>
+        {
+            entity.HasIndex(e => e.AssessmentId);
+            entity.HasIndex(e => new { e.AssessmentId, e.Complexity });
+
+            entity.HasOne(e => e.Assessment)
+                  .WithMany(a => a.Questions)
+                  .HasForeignKey(e => e.AssessmentId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // McqTest
+        modelBuilder.Entity<McqTest>(entity =>
+        {
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.AssessmentId);
+            entity.HasIndex(e => new { e.UserId, e.AssessmentId });
+
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Assessment)
+                  .WithMany()
+                  .HasForeignKey(e => e.AssessmentId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // McqAnswer
+        modelBuilder.Entity<McqAnswer>(entity =>
+        {
+            entity.HasIndex(e => e.TestId);
+            entity.HasIndex(e => new { e.TestId, e.QuestionId }).IsUnique();
+
+            entity.HasOne(e => e.Test)
+                  .WithMany(t => t.Answers)
+                  .HasForeignKey(e => e.TestId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Question)
+                  .WithMany()
+                  .HasForeignKey(e => e.QuestionId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // User → Assessment (optional FK)
+        modelBuilder.Entity<User>(entity2 =>
+        {
+            entity2.HasOne(u => u.Assessment)
+                   .WithMany()
+                   .HasForeignKey(u => u.AssessmentId)
+                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // AdminUser
+        modelBuilder.Entity<AdminUser>(entity =>
+        {
+            entity.HasIndex(e => e.UserID).IsUnique();
         });
     }
 }

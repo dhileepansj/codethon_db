@@ -17,6 +17,9 @@ public static class InfrastructureServiceCollectionExtensions
             opts.UseNpgsql(connectionString, npgsql =>
                 npgsql.MigrationsAssembly(typeof(HackathonDbContext).Assembly.FullName)));
 
+        // Register abstract DbContext so Application layer can resolve it
+        services.AddScoped<DbContext>(sp => sp.GetRequiredService<HackathonDbContext>());
+
         return services;
     }
 }

@@ -51,6 +51,9 @@ builder.Services.AddRepositories();
 // Application Services
 builder.Services.AddApplicationLayer();
 
+// Background Services
+builder.Services.AddHostedService<DCView.Hackathon.API.BackgroundServices.McqAutoSubmitService>();
+
 // HttpClient for Ollama AI detection
 builder.Services.AddHttpClient("Ollama", client =>
 {

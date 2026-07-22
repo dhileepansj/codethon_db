@@ -9,6 +9,7 @@ public interface IUserRepository
     Task<IEnumerable<User>> GetAllParticipantsAsync();
     Task<User> CreateAsync(User user);
     Task UpdateAsync(User user);
+    Task DeleteAsync(User user);
     Task<bool> ExistsAsync(string userId);
     Task SaveChangesAsync(CancellationToken ct = default);
 }

@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut, Users, Play, Square, RotateCcw, Download, Plus, Upload,
   Clock, Settings, Shield, ShieldAlert, Calendar, ChevronRight,
   Search, MoreHorizontal, AlertTriangle, CheckCircle, XCircle,
-  Key, File, History, Eye, Unlock, FileSpreadsheet, Database, ArrowLeftRight, Code
+  Key, File, History, Eye, Unlock, FileSpreadsheet, Database, ArrowLeftRight, Code, Trash2, ClipboardList
 } from "lucide-react";
 import { toast } from "sonner";
 import { logout } from "@/redux/slices/authSlice";
@@ -20,7 +20,10 @@ import TabSwitchLogsPanel from "@/components/admin/TabSwitchLogsPanel";
 import SecuritySettingsPanel from "@/components/admin/SecuritySettingsPanel";
 import ScaffoldScriptsPanel from "@/components/admin/ScaffoldScriptsPanel";
 import SchedulePanel from "@/components/admin/SchedulePanel";
-import type { AppDispatch } from "@/redux/store";
+import McqAssessmentPanel from "@/components/admin/McqAssessmentPanel";
+import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
+import { mcqAdminService } from "@/services/mcqService";
+import type { AppDispatch, RootState } from "@/redux/store";
 import type { UserDto, DashboardStats } from "@/types";
 
 type AdminView = "participants" | "setup" | "config";
@@ -31,11 +34,17 @@ type DialogState =
   | { type: "activateAllConfirm"; duration?: number }
   | { type: "deactivateAll" }
   | { type: "extend"; userId: string }
-  | { type: "resetDb"; userId: string };
+  | { type: "resetDb"; userId: string }
+  | { type: "deleteUser"; userId: string };
 
 export default function AdminPage() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const { user } = useSelector((s: RootState) => s.auth);
+
+  // Permissions helper — SuperAdmin has everything, Admin uses permissions object
+  const isSuperAdmin = user?.role === "SuperAdmin";
+  const can = (perm: string) => isSuperAdmin || (user?.permissions as any)?.[perm] === true;
 
   const [view, setView] = useState<AdminView>("participants");
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -55,9 +64,12 @@ export default function AdminPage() {
   const [showSecuritySettings, setShowSecuritySettings] = useState(false);
   const [showScaffoldScripts, setShowScaffoldScripts] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showMcqPanel, setShowMcqPanel] = useState(false);
+  const [showAdminUsers, setShowAdminUsers] = useState(false);
 
-  const [newUser, setNewUser] = useState({ UserID: "", Password: "", FullName: "", Email: "" });
-  const [serverConfig, setServerConfig] = useState({ ServerName: "", AdminUserId: "", AdminPassword: "", DbPrefix: "Hackathon_" });
+  const [newUser, setNewUser] = useState({ UserID: "", Password: "", FullName: "", Email: "", DbEnginePreference: "SqlServer", AssessmentId: "" });
+  const [serverConfig, setServerConfig] = useState({ ServerName: "", AdminUserId: "", AdminPassword: "", DbPrefix: "Hackathon_", DbEngineType: "SqlServer", OracleServiceName: "", Port: "1521" });
+  const [assessmentList, setAssessmentList] = useState<{ id: number; title: string; type: string; subType: string }[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -83,6 +95,8 @@ export default function AdminPage() {
         }
       } catch {}
     } catch { toast.error("Failed to load data"); }
+    // Load assessments for user creation
+    try { const a = await mcqAdminService.getAssessments(); setAssessmentList(a.map((x: any) => ({ id: x.id, title: x.title, type: x.type, subType: x.subType }))); } catch {}
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -141,14 +155,43 @@ export default function AdminPage() {
     try { await adminService.resetDatabase(userId); toast.success("Database reset"); loadData(); } catch (err: any) { toast.error(err.response?.data?.message || "Failed"); }
   };
 
+  const doDeleteUser = async (userId: string) => {
+    setDialog({ type: "none" });
+    try { await adminService.deleteUser(userId); toast.success(`User "${userId}" permanently deleted`); setSelectedUser(null); loadData(); } catch (err: any) { toast.error(err.response?.data?.message || "Failed to delete user"); }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { await adminService.createUser(newUser); toast.success("User created"); setShowCreateModal(false); setNewUser({ UserID: "", Password: "", FullName: "", Email: "" }); loadData(); } catch (err: any) { toast.error(err.response?.data?.message || "Failed"); }
+    try {
+      const payload: any = { UserID: newUser.UserID, Password: newUser.Password, FullName: newUser.FullName || undefined, Email: newUser.Email || undefined };
+      if (newUser.AssessmentId) {
+        payload.AssessmentId = parseInt(newUser.AssessmentId);
+      } else {
+        payload.DbEnginePreference = newUser.DbEnginePreference;
+      }
+      await adminService.createUser(payload);
+      toast.success("User created");
+      setShowCreateModal(false);
+      setNewUser({ UserID: "", Password: "", FullName: "", Email: "", DbEnginePreference: "SqlServer", AssessmentId: "" });
+      loadData();
+    } catch (err: any) { toast.error(err.response?.data?.message || "Failed"); }
   };
 
   const handleConfigureServer = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { await adminService.configureServer(serverConfig); toast.success("Server configured"); setShowServerConfig(false); } catch (err: any) { toast.error(err.response?.data?.message || "Failed"); }
+    try {
+      await adminService.configureServer({
+        ServerName: serverConfig.ServerName,
+        AdminUserId: serverConfig.AdminUserId,
+        AdminPassword: serverConfig.AdminPassword,
+        DbPrefix: serverConfig.DbPrefix || undefined,
+        DbEngineType: serverConfig.DbEngineType,
+        OracleServiceName: serverConfig.DbEngineType === "Oracle" ? serverConfig.OracleServiceName : undefined,
+        Port: serverConfig.DbEngineType === "Oracle" && serverConfig.Port ? parseInt(serverConfig.Port) : undefined,
+      });
+      toast.success(`${serverConfig.DbEngineType === "Oracle" ? "Oracle" : "SQL Server"} configured`);
+      setShowServerConfig(false);
+    } catch (err: any) { toast.error(err.response?.data?.message || "Failed"); }
   };
 
   const handleLogout = () => { dispatch(logout()); navigate("/login", { replace: true }); };
@@ -170,14 +213,16 @@ export default function AdminPage() {
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1">
-          <SidebarItem icon={<Users className="h-4 w-4" />} label="Participants" active={view === "participants"} onClick={() => setView("participants")} />
-          <SidebarItem icon={<Shield className="h-4 w-4" />} label="AI Detection" active={false} onClick={() => setShowAiDetection(true)} />
-          <SidebarItem icon={<ArrowLeftRight className="h-4 w-4" />} label="Tab Switch Logs" active={false} onClick={() => setShowTabSwitchLogs(true)} />
-          <SidebarItem icon={<Key className="h-4 w-4" />} label="Security Settings" active={false} onClick={() => setShowSecuritySettings(true)} />
-          <SidebarItem icon={<Code className="h-4 w-4" />} label="Scaffold Scripts" active={false} onClick={() => setShowScaffoldScripts(true)} />
-          <SidebarItem icon={<Clock className="h-4 w-4" />} label="Session Schedule" active={false} onClick={() => setShowSchedule(true)} />
-          <SidebarItem icon={<Calendar className="h-4 w-4" />} label="Hackathon Setup" active={false} onClick={() => setShowHackathonSetup(true)} />
-          <SidebarItem icon={<Settings className="h-4 w-4" />} label="Server Config" active={false} onClick={() => setShowServerConfig(true)} />
+          {can("canManageUsers") && <SidebarItem icon={<Users className="h-4 w-4" />} label="Participants" active={view === "participants"} onClick={() => setView("participants")} />}
+          {can("canManageAiDetection") && <SidebarItem icon={<Shield className="h-4 w-4" />} label="AI Detection" active={false} onClick={() => setShowAiDetection(true)} />}
+          {can("canViewMonitoring") && <SidebarItem icon={<ArrowLeftRight className="h-4 w-4" />} label="Tab Switch Logs" active={false} onClick={() => setShowTabSwitchLogs(true)} />}
+          {can("canManageSecuritySettings") && <SidebarItem icon={<Key className="h-4 w-4" />} label="Security Settings" active={false} onClick={() => setShowSecuritySettings(true)} />}
+          {can("canManageScaffoldScripts") && <SidebarItem icon={<Code className="h-4 w-4" />} label="Scaffold Scripts" active={false} onClick={() => setShowScaffoldScripts(true)} />}
+          {can("canManageSessions") && <SidebarItem icon={<Clock className="h-4 w-4" />} label="Session Schedule" active={false} onClick={() => setShowSchedule(true)} />}
+          {can("canManageHackathonSetup") && <SidebarItem icon={<Calendar className="h-4 w-4" />} label="Hackathon Setup" active={false} onClick={() => setShowHackathonSetup(true)} />}
+          {can("canManageAssessments") && <SidebarItem icon={<ClipboardList className="h-4 w-4" />} label="MCQ Assessments" active={false} onClick={() => setShowMcqPanel(true)} />}
+          {can("canManageServerConfig") && <SidebarItem icon={<Settings className="h-4 w-4" />} label="Server Config" active={false} onClick={() => setShowServerConfig(true)} />}
+          {isSuperAdmin && <SidebarItem icon={<Shield className="h-4 w-4" />} label="Admin Users" active={false} onClick={() => setShowAdminUsers(true)} />}
         </nav>
 
         {/* Stats at bottom of sidebar */}
@@ -234,12 +279,12 @@ export default function AdminPage() {
             <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
               <tr className="text-left">
                 <th className="px-5 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Session</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
-                <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Database</th>
-                <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Focus</th>
-                <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">DevTools</th>
-                <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Submitted</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Progress</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Monitoring</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Result</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-40">Actions</th>
               </tr>
             </thead>
@@ -247,6 +292,7 @@ export default function AdminPage() {
               {filteredUsers.map((u) => {
                 const activity = activityMap[u.userID];
                 const devtools = devtoolsMap[u.userID] || 0;
+                const isMcq = u.assessmentType === "MCQ";
                 return (
                   <tr
                     key={u.id}
@@ -255,7 +301,7 @@ export default function AdminPage() {
                   >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${isMcq ? "bg-gradient-to-br from-indigo-400 to-purple-600" : "bg-gradient-to-br from-teal-400 to-teal-600"}`}>
                           {u.userID.charAt(0).toUpperCase()}
                         </div>
                         <div>
@@ -272,39 +318,66 @@ export default function AdminPage() {
                       </div>
                     </td>
                     <td className="px-3 py-3">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                        isMcq ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300" :
+                        u.dbEnginePreference === "Oracle" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" :
+                        "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300"
+                      }`}>
+                        {isMcq ? (u.assessmentSubType || "MCQ") : u.dbEnginePreference === "Oracle" ? "Oracle" : "SQL Server"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
                       <StatusBadge status={u.session?.isExpired ? "expired" : u.session?.isActive ? "active" : "inactive"} />
                     </td>
                     <td className="px-3 py-3 text-xs text-gray-500 dark:text-gray-400 font-mono">
                       {u.session?.isExpired ? <span className="text-red-500">Expired</span> : u.session?.expiresAt ? formatTimeRemaining(u.session.expiresAt) : u.session?.isActive ? "∞" : "—"}
                     </td>
                     <td className="px-3 py-3">
-                      {u.session?.databaseCreated ? (
-                        <span className="text-xs font-mono text-teal-600 dark:text-teal-400">{u.session.databaseName}</span>
+                      {isMcq ? (
+                        u.mcqProgress?.status === "Submitted" ? (
+                          <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400">{u.mcqProgress.answered}/{u.mcqProgress.totalQuestions} done</span>
+                        ) : u.mcqProgress?.status === "InProgress" ? (
+                          <span className="text-xs font-mono text-amber-600">{u.mcqProgress.answered}/{u.mcqProgress.totalQuestions} answering</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">Not started</span>
+                        )
                       ) : (
-                        <span className="text-xs text-gray-400">—</span>
+                        u.session?.databaseCreated ? (
+                          <span className="text-xs font-mono text-teal-600 dark:text-teal-400">{u.session.databaseName}</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )
                       )}
                     </td>
                     <td className="px-3 py-3">
-                      {!activity || activity.switches === 0 ? (
-                        <span className="text-xs text-green-600">● Focused</span>
-                      ) : activity.suspicious ? (
-                        <span className="flex items-center gap-1 text-xs text-red-600 font-medium"><AlertTriangle className="h-3 w-3" />{activity.switches}</span>
-                      ) : (
-                        <span className="text-xs text-gray-500">{activity.switches} sw</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {!activity || activity.switches === 0 ? (
+                          <span className="text-xs text-green-600">●</span>
+                        ) : activity.suspicious ? (
+                          <span className="flex items-center gap-0.5 text-xs text-red-600 font-medium"><AlertTriangle className="h-3 w-3" />{activity.switches}</span>
+                        ) : (
+                          <span className="text-xs text-gray-500">{activity.switches}sw</span>
+                        )}
+                        {devtools > 0 && (
+                          <span className="flex items-center gap-0.5 text-xs text-red-600 font-medium"><ShieldAlert className="h-3 w-3" />{devtools}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-3">
-                      {devtools > 0 ? (
-                        <span className="flex items-center gap-1 text-xs text-red-600 font-medium"><ShieldAlert className="h-3 w-3" />{devtools}</span>
+                      {isMcq ? (
+                        u.mcqProgress?.status === "Submitted" ? (
+                          <span className={`text-xs font-mono font-semibold ${u.mcqProgress.passed === false ? "text-red-600" : "text-green-600"}`}>
+                            {u.mcqProgress.score}/{u.mcqProgress.maxScore} ({u.mcqProgress.percentage}%)
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )
                       ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3">
-                      {(u.session as any)?.isSubmitted ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
+                        (u.session as any)?.isSubmitted ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )
                       )}
                     </td>
                     <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
@@ -315,8 +388,9 @@ export default function AdminPage() {
                           <IconBtn icon={<Square />} title="Deactivate" color="red" onClick={() => doDeactivate(u.userID)} />
                         )}
                         {u.session?.isActive && <IconBtn icon={<Clock />} title="Extend" color="amber" onClick={() => setDialog({ type: "extend", userId: u.userID })} />}
-                        {u.session?.databaseCreated && <IconBtn icon={<RotateCcw />} title="Reset DB" color="orange" onClick={() => setDialog({ type: "resetDb", userId: u.userID })} />}
+                        {!isMcq && u.session?.databaseCreated && <IconBtn icon={<RotateCcw />} title="Reset DB" color="orange" onClick={() => setDialog({ type: "resetDb", userId: u.userID })} />}
                         <IconBtn icon={<Download />} title="Export" color="blue" onClick={async () => { try { await adminService.exportUser(u.userID); } catch (err: any) { toast.error(err.message || "Nothing to export"); } }} />
+                        <IconBtn icon={<Trash2 />} title="Delete User" color="red" onClick={() => setDialog({ type: "deleteUser", userId: u.userID })} />
                       </div>
                     </td>
                   </tr>
@@ -348,6 +422,24 @@ export default function AdminPage() {
             <input placeholder="Password *" value={newUser.Password} onChange={(e) => setNewUser({ ...newUser, Password: e.target.value })} required className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
             <input placeholder="Full Name" value={newUser.FullName} onChange={(e) => setNewUser({ ...newUser, FullName: e.target.value })} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
             <input placeholder="Email" value={newUser.Email} onChange={(e) => setNewUser({ ...newUser, Email: e.target.value })} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Assessment</label>
+              <select value={newUser.AssessmentId} onChange={(e) => setNewUser({ ...newUser, AssessmentId: e.target.value })} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
+                <option value="">— SQL Hackathon (use DB Engine below) —</option>
+                {assessmentList.map((a) => (
+                  <option key={a.id} value={a.id}>{a.title} ({a.type} - {a.subType})</option>
+                ))}
+              </select>
+            </div>
+            {!newUser.AssessmentId && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Database Engine</label>
+                <select value={newUser.DbEnginePreference} onChange={(e) => setNewUser({ ...newUser, DbEnginePreference: e.target.value })} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
+                  <option value="SqlServer">SQL Server</option>
+                  <option value="Oracle">Oracle</option>
+                </select>
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
               <button type="submit" className="px-4 py-2 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700">Create</button>
@@ -363,15 +455,44 @@ export default function AdminPage() {
       {showSecuritySettings && <SecuritySettingsPanel onClose={() => setShowSecuritySettings(false)} />}
       {showScaffoldScripts && <ScaffoldScriptsPanel onClose={() => setShowScaffoldScripts(false)} />}
       {showSchedule && <SchedulePanel onClose={() => setShowSchedule(false)} />}
+      {showMcqPanel && <McqAssessmentPanel onClose={() => setShowMcqPanel(false)} />}
+      {showAdminUsers && <AdminUsersPanel onClose={() => setShowAdminUsers(false)} />}
 
       {showServerConfig && (
         <Modal title="Server Configuration" onClose={() => setShowServerConfig(false)}>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">SQL Server where participant databases are created.</p>
+          {/* Engine type tabs */}
+          <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setServerConfig({ ...serverConfig, DbEngineType: "SqlServer", DbPrefix: "Hackathon_" })}
+              className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${serverConfig.DbEngineType === "SqlServer" ? "bg-white dark:bg-gray-700 text-teal-700 dark:text-teal-300 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+            >
+              SQL Server
+            </button>
+            <button
+              type="button"
+              onClick={() => setServerConfig({ ...serverConfig, DbEngineType: "Oracle", DbPrefix: "HACK_" })}
+              className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${serverConfig.DbEngineType === "Oracle" ? "bg-white dark:bg-gray-700 text-teal-700 dark:text-teal-300 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+            >
+              Oracle
+            </button>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            {serverConfig.DbEngineType === "Oracle"
+              ? "Oracle server where participant schemas are created."
+              : "SQL Server where participant databases are created."}
+          </p>
           <form onSubmit={handleConfigureServer} className="space-y-3">
-            <input placeholder="Server Name" value={serverConfig.ServerName} onChange={(e) => setServerConfig({ ...serverConfig, ServerName: e.target.value })} required className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
-            <input placeholder="Admin User ID" value={serverConfig.AdminUserId} onChange={(e) => setServerConfig({ ...serverConfig, AdminUserId: e.target.value })} required className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
+            <input placeholder={serverConfig.DbEngineType === "Oracle" ? "Host Name / IP" : "Server Name"} value={serverConfig.ServerName} onChange={(e) => setServerConfig({ ...serverConfig, ServerName: e.target.value })} required className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
+            <input placeholder={serverConfig.DbEngineType === "Oracle" ? "Admin User (e.g., SYSTEM)" : "Admin User ID"} value={serverConfig.AdminUserId} onChange={(e) => setServerConfig({ ...serverConfig, AdminUserId: e.target.value })} required className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
             <input type="password" placeholder="Admin Password" value={serverConfig.AdminPassword} onChange={(e) => setServerConfig({ ...serverConfig, AdminPassword: e.target.value })} required className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
-            <input placeholder="DB Prefix (default: Hackathon_)" value={serverConfig.DbPrefix} onChange={(e) => setServerConfig({ ...serverConfig, DbPrefix: e.target.value })} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
+            <input placeholder={serverConfig.DbEngineType === "Oracle" ? "Schema Prefix (default: HACK_)" : "DB Prefix (default: Hackathon_)"} value={serverConfig.DbPrefix} onChange={(e) => setServerConfig({ ...serverConfig, DbPrefix: e.target.value })} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
+            {serverConfig.DbEngineType === "Oracle" && (
+              <>
+                <input placeholder="Service Name (e.g., XEPDB1, ORCL)" value={serverConfig.OracleServiceName} onChange={(e) => setServerConfig({ ...serverConfig, OracleServiceName: e.target.value })} required className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
+                <input placeholder="Port (default: 1521)" value={serverConfig.Port} onChange={(e) => setServerConfig({ ...serverConfig, Port: e.target.value })} type="number" className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none" />
+              </>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setShowServerConfig(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
               <button type="submit" className="px-4 py-2 text-sm font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700">Save</button>
@@ -387,6 +508,7 @@ export default function AdminPage() {
       {dialog.type === "deactivateAll" && <ConfirmDialog title="Stop All Sessions" message={`Deactivate ${users.filter(u => u.session?.isActive).length} active sessions?`} confirmLabel="Deactivate All" confirmVariant="danger" onConfirm={doDeactivateAll} onCancel={() => setDialog({ type: "none" })} />}
       {dialog.type === "extend" && <InputDialog title="Extend Session" message={`Add time to "${dialog.userId}".`} inputLabel="Additional minutes" inputPlaceholder="e.g., 30" inputType="number" confirmLabel="Extend" allowEmpty={false} onConfirm={(v) => doExtend(dialog.userId, v)} onCancel={() => setDialog({ type: "none" })} />}
       {dialog.type === "resetDb" && <ConfirmDialog title="Reset Database" message={`DROP database for "${dialog.userId}"? This is irreversible.`} confirmLabel="Drop Database" confirmVariant="danger" onConfirm={() => doResetDb(dialog.userId)} onCancel={() => setDialog({ type: "none" })} />}
+      {dialog.type === "deleteUser" && <ConfirmDialog title="Delete User Permanently" message={`Permanently delete "${dialog.userId}"? This will DROP their database/schema, delete all their files, execution history, logs, and remove the user. This action cannot be undone.`} confirmLabel="Delete Permanently" confirmVariant="danger" onConfirm={() => doDeleteUser(dialog.userId)} onCancel={() => setDialog({ type: "none" })} />}
     </div>
   );
 }

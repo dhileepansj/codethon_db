@@ -13,6 +13,15 @@ public class LoginResponseDto
     public string Role { get; set; } = string.Empty;
     public string? FullName { get; set; }
     public bool MustChangePassword { get; set; }
+    /// <summary>"SqlServer" or "Oracle"</summary>
+    public string DbEnginePreference { get; set; } = "SqlServer";
+    /// <summary>"SQL" or "MCQ" — determines which workspace the user sees</summary>
+    public string AssessmentType { get; set; } = "SQL";
+    /// <summary>Assessment sub-type: "SqlServer", "Oracle", "Selenium", "Playwright", etc.</summary>
+    public string? AssessmentSubType { get; set; }
+    public int? AssessmentId { get; set; }
+    /// <summary>Admin permissions (null for participants)</summary>
+    public Application.DTOs.Admin.AdminPermissionsDto? Permissions { get; set; }
     public SessionInfoDto? Session { get; set; }
 }
 

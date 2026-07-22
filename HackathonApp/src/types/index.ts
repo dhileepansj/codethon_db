@@ -7,10 +7,31 @@ export interface LoginRequest {
 export interface LoginResponse {
   token: string;
   userID: string;
-  role: "SuperAdmin" | "Participant";
+  role: "SuperAdmin" | "Admin" | "Participant";
   fullName?: string;
   mustChangePassword: boolean;
+  dbEnginePreference?: "SqlServer" | "Oracle";
+  assessmentType?: "SQL" | "MCQ";
+  assessmentSubType?: string;
+  assessmentId?: number;
+  permissions?: AdminPermissions;
   session?: SessionInfo;
+}
+
+export interface AdminPermissions {
+  canManageUsers: boolean;
+  canManageSessions: boolean;
+  canViewMonitoring: boolean;
+  canManageAssessments: boolean;
+  canViewResults: boolean;
+  canManageHackathonSetup: boolean;
+  canManageServerConfig: boolean;
+  canManageScaffoldScripts: boolean;
+  canManageSecuritySettings: boolean;
+  canManageAiDetection: boolean;
+  canExportData: boolean;
+  canResetDatabase: boolean;
+  canDeleteUsers: boolean;
 }
 
 export interface SessionInfo {
@@ -161,6 +182,21 @@ export interface UserDto {
   createdDate: string;
   lastLoginAt?: string;
   loginCount: number;
+  dbEnginePreference?: "SqlServer" | "Oracle";
+  assessmentType?: "SQL" | "MCQ";
+  assessmentTitle?: string;
+  assessmentSubType?: string;
+  assessmentId?: number;
+  mcqProgress?: {
+    status: "NotStarted" | "InProgress" | "Submitted";
+    totalQuestions: number;
+    answered: number;
+    score?: number;
+    maxScore?: number;
+    percentage?: number;
+    passed?: boolean;
+    submittedAt?: string;
+  };
   session?: {
     isActive: boolean;
     isExpired: boolean;
@@ -184,4 +220,138 @@ export interface ApiResponse<T> {
   data?: T;
   message?: string;
   errors?: string[];
+}
+
+// ─── MCQ Types ───────────────────────────────────────────────────
+
+export interface McqAssessment {
+  id: number;
+  title: string;
+  type: "SQL" | "MCQ";
+  subType: string;
+  durationMinutes?: number;
+  totalQuestions: number;
+  maxMarks: number;
+  simplePercentage: number;
+  mediumPercentage: number;
+  complexPercentage: number;
+  simpleMarks: number;
+  mediumMarks: number;
+  complexMarks: number;
+  negativeMarking: boolean;
+  negativeMarkValue: number;
+  shuffleQuestions: boolean;
+  shuffleOptions: boolean;
+  showResultImmediately: boolean;
+  passPercentage: number;
+  allowNavigation: boolean;
+  allowReview: boolean;
+  autoSubmitOnTimeout: boolean;
+  oneQuestionPerPage: boolean;
+  showComplexity: boolean;
+  showMarks: boolean;
+  isActive: boolean;
+  questionBankCount: number;
+  createdDate: string;
+}
+
+export interface McqTestInfo {
+  assessmentId: number;
+  title: string;
+  totalQuestions: number;
+  durationMinutes: number;
+  maxMarks: number;
+  negativeMarking: boolean;
+  negativeMarkValue: number;
+  allowNavigation: boolean;
+  allowReview: boolean;
+  oneQuestionPerPage: boolean;
+  showComplexity: boolean;
+  showMarks: boolean;
+  simpleCount: number;
+  mediumCount: number;
+  complexCount: number;
+  simpleMarks: number;
+  mediumMarks: number;
+  complexMarks: number;
+  hasExistingTest: boolean;
+  existingTestId?: number;
+  isAlreadySubmitted: boolean;
+  submittedScore?: number;
+  submittedMaxScore?: number;
+  submittedPercentage?: number;
+  submittedPassed?: boolean;
+}
+
+export interface McqStartResult {
+  testId: number;
+  totalQuestions: number;
+  startedAt: string;
+  expiresAt: string;
+  durationMinutes: number;
+}
+
+export interface McqTestStatus {
+  testId: number;
+  isInProgress: boolean;
+  isSubmitted: boolean;
+  startedAt?: string;
+  expiresAt?: string;
+  remainingSeconds?: number;
+  totalQuestions: number;
+  answered: number;
+  flagged: number;
+  navigationPanel: McqNavItem[];
+}
+
+export interface McqNavItem {
+  questionIndex: number;
+  questionId: number;
+  isAnswered: boolean;
+  isFlagged: boolean;
+  complexity?: string;
+}
+
+export interface McqQuestionForTest {
+  questionId: number;
+  questionIndex: number;
+  question: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  complexity: string;
+  marks: number;
+  category?: string;
+  selectedAnswer?: string;
+  isFlagged: boolean;
+}
+
+export interface McqSubmitResult {
+  score: number;
+  maxScore: number;
+  percentage: number;
+  correct: number;
+  wrong: number;
+  skipped: number;
+  totalQuestions: number;
+  passed?: boolean;
+  timeSpentSeconds?: number;
+  message: string;
+  showScores: boolean;
+  detailedResults?: McqAnswerReview[];
+}
+
+export interface McqAnswerReview {
+  questionIndex: number;
+  question: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctAnswer: string;
+  selectedAnswer?: string;
+  isCorrect: boolean;
+  marksAwarded: number;
+  explanation?: string;
 }

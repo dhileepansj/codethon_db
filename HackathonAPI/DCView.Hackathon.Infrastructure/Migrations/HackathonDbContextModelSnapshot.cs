@@ -22,6 +22,107 @@ namespace DCView.Hackathon.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.AdminUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("CanDeleteUsers")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanExportData")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageAiDetection")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageAssessments")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageHackathonSetup")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageScaffoldScripts")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageSecuritySettings")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageServerConfig")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageSessions")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageUsers")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanResetDatabase")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanViewMonitoring")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanViewResults")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("FullName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("UserID")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserID")
+                        .IsUnique();
+
+                    b.ToTable("Hackathon_AdminUsers");
+                });
+
             modelBuilder.Entity("DCView.Hackathon.Domain.Entities.AiBlockedSave", b =>
                 {
                     b.Property<long>("Id")
@@ -210,6 +311,118 @@ namespace DCView.Hackathon.Infrastructure.Migrations
                     b.ToTable("Hackathon_AiDetectionUserOverrides");
                 });
 
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.Assessment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AllowNavigation")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowReview")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AutoSubmitOnTimeout")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ComplexMarks")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ComplexPercentage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MaxMarks")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MediumMarks")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MediumPercentage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("NegativeMarkValue")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("NegativeMarking")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("OneQuestionPerPage")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PassPercentage")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ShowComplexity")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowMarks")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowResultImmediately")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShuffleOptions")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShuffleQuestions")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SimpleMarks")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SimplePercentage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SubType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("TotalQuestions")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Type");
+
+                    b.ToTable("Hackathon_Assessments");
+                });
+
             modelBuilder.Entity("DCView.Hackathon.Domain.Entities.ExecutionHistory", b =>
                 {
                     b.Property<long>("Id")
@@ -318,6 +531,9 @@ namespace DCView.Hackathon.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<int>("DbEngineType")
+                        .HasColumnType("integer");
+
                     b.Property<string>("DbPrefix")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -330,6 +546,13 @@ namespace DCView.Hackathon.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int>("MaxRowsPerPage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OracleServiceName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("Port")
                         .HasColumnType("integer");
 
                     b.Property<string>("ServerName")
@@ -494,6 +717,204 @@ namespace DCView.Hackathon.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Hackathon_Sessions");
+                });
+
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.McqAnswer", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("AnsweredAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool?>("IsCorrect")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsFlagged")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("MarksAwarded")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("QuestionId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("QuestionIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SelectedAnswer")
+                        .HasMaxLength(1)
+                        .HasColumnType("character varying(1)");
+
+                    b.Property<int>("TestId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TimeTakenSeconds")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("TestId");
+
+                    b.HasIndex("TestId", "QuestionId")
+                        .IsUnique();
+
+                    b.ToTable("Hackathon_McqAnswers");
+                });
+
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.McqQuestion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AssessmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Complexity")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("CorrectAnswer")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("character varying(1)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Explanation")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Marks")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OptionA")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("OptionB")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("OptionC")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("OptionD")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SNo")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssessmentId");
+
+                    b.HasIndex("AssessmentId", "Complexity");
+
+                    b.ToTable("Hackathon_McqQuestions");
+                });
+
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.McqTest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AssessmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Attempted")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Correct")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsAutoSubmitted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsInProgress")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSubmitted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("MaxScore")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("OptionOrder")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("Passed")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("Percentage")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("QuestionOrder")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Score")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("Skipped")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("TimeSpentSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalQuestions")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Wrong")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssessmentId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "AssessmentId");
+
+                    b.ToTable("Hackathon_McqTests");
                 });
 
             modelBuilder.Entity("DCView.Hackathon.Domain.Entities.PasswordChangeLog", b =>
@@ -694,12 +1115,18 @@ namespace DCView.Hackathon.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AssessmentId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("DbEnginePreference")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Email")
                         .HasMaxLength(200)
@@ -748,6 +1175,8 @@ namespace DCView.Hackathon.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssessmentId");
+
                     b.HasIndex("UserID")
                         .IsUnique();
 
@@ -759,6 +1188,7 @@ namespace DCView.Hackathon.Infrastructure.Migrations
                             Id = 1,
                             CreatedBy = "SYSTEM",
                             CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DbEnginePreference = 0,
                             FullName = "Super Admin",
                             IsActive = true,
                             LoginCount = 0,
@@ -963,6 +1393,55 @@ namespace DCView.Hackathon.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.McqAnswer", b =>
+                {
+                    b.HasOne("DCView.Hackathon.Domain.Entities.McqQuestion", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("DCView.Hackathon.Domain.Entities.McqTest", "Test")
+                        .WithMany("Answers")
+                        .HasForeignKey("TestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+
+                    b.Navigation("Test");
+                });
+
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.McqQuestion", b =>
+                {
+                    b.HasOne("DCView.Hackathon.Domain.Entities.Assessment", "Assessment")
+                        .WithMany("Questions")
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assessment");
+                });
+
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.McqTest", b =>
+                {
+                    b.HasOne("DCView.Hackathon.Domain.Entities.Assessment", "Assessment")
+                        .WithMany()
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("DCView.Hackathon.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assessment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DCView.Hackathon.Domain.Entities.PasswordChangeLog", b =>
                 {
                     b.HasOne("DCView.Hackathon.Domain.Entities.User", "User")
@@ -983,6 +1462,16 @@ namespace DCView.Hackathon.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.User", b =>
+                {
+                    b.HasOne("DCView.Hackathon.Domain.Entities.Assessment", "Assessment")
+                        .WithMany()
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Assessment");
                 });
 
             modelBuilder.Entity("DCView.Hackathon.Domain.Entities.UserFile", b =>
@@ -1032,9 +1521,19 @@ namespace DCView.Hackathon.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.Assessment", b =>
+                {
+                    b.Navigation("Questions");
+                });
+
             modelBuilder.Entity("DCView.Hackathon.Domain.Entities.HackathonSchedule", b =>
                 {
                     b.Navigation("Breaks");
+                });
+
+            modelBuilder.Entity("DCView.Hackathon.Domain.Entities.McqTest", b =>
+                {
+                    b.Navigation("Answers");
                 });
 
             modelBuilder.Entity("DCView.Hackathon.Domain.Entities.User", b =>

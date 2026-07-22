@@ -42,7 +42,7 @@ public class HistoryController : ControllerBase
     }
 
     [HttpGet("{userId}")]
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<IActionResult> GetUserHistory(string userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 25)
     {
         // Resolve UserID string to int id

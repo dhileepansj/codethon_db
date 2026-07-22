@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using DCView.Hackathon.Domain.Enums;
 
 namespace DCView.Hackathon.Domain.Entities;
 
@@ -57,7 +58,20 @@ public class User
     /// </summary>
     public int LoginCount { get; set; } = 0;
 
+    /// <summary>
+    /// The database engine this participant will use: SqlServer (0) or Oracle (1).
+    /// </summary>
+    public DbEngineType DbEnginePreference { get; set; } = DbEngineType.SqlServer;
+
+    /// <summary>
+    /// The assessment assigned to this participant. Null = use DbEnginePreference for SQL hackathon (backward compatible).
+    /// </summary>
+    public int? AssessmentId { get; set; }
+
     // Navigation
+    [ForeignKey(nameof(AssessmentId))]
+    public virtual Assessment? Assessment { get; set; }
+
     public virtual HackathonSession? Session { get; set; }
     public virtual ICollection<UserFile> Files { get; set; } = new List<UserFile>();
     public virtual ICollection<UserFolder> Folders { get; set; } = new List<UserFolder>();

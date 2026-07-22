@@ -12,13 +12,18 @@ export const adminService = {
     return res.data.data;
   },
 
-  createUser: async (data: { UserID: string; Password: string; FullName?: string; Email?: string }) => {
+  createUser: async (data: { UserID: string; Password: string; FullName?: string; Email?: string; DbEnginePreference?: string; AssessmentId?: number }) => {
     const res = await httpClient.post("/api/admin/users", data);
     return res.data;
   },
 
-  bulkCreateUsers: async (users: { UserID: string; Password: string; FullName?: string; Email?: string }[]) => {
+  bulkCreateUsers: async (users: { UserID: string; Password: string; FullName?: string; Email?: string; DbEnginePreference?: string }[]) => {
     const res = await httpClient.post("/api/admin/users/bulk", users);
+    return res.data;
+  },
+
+  deleteUser: async (userId: string) => {
+    const res = await httpClient.delete(`/api/admin/users/${userId}/permanent`);
     return res.data;
   },
 
@@ -97,7 +102,15 @@ export const adminService = {
     }
   },
 
-  configureServer: async (data: { ServerName: string; AdminUserId: string; AdminPassword: string; DbPrefix?: string }) => {
+  configureServer: async (data: {
+    ServerName: string;
+    AdminUserId: string;
+    AdminPassword: string;
+    DbPrefix?: string;
+    DbEngineType?: string;
+    OracleServiceName?: string;
+    Port?: number;
+  }) => {
     const res = await httpClient.post("/api/admin/config/hackathon-server", data);
     return res.data;
   },

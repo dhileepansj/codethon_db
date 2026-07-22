@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using DCView.Hackathon.Domain.Enums;
 
 namespace DCView.Hackathon.Domain.Entities;
 
@@ -27,6 +28,25 @@ public class HackathonConfig
     public int MaxRowsPerPage { get; set; } = 25;
 
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Database engine type: SqlServer (0) or Oracle (1).
+    /// Defaults to SqlServer for backward compatibility.
+    /// </summary>
+    public DbEngineType DbEngineType { get; set; } = DbEngineType.SqlServer;
+
+    /// <summary>
+    /// Oracle-specific: Service name or SID (e.g., "XEPDB1", "ORCL").
+    /// Not used for SQL Server.
+    /// </summary>
+    [MaxLength(200)]
+    public string? OracleServiceName { get; set; }
+
+    /// <summary>
+    /// Oracle-specific: Port number (default 1521).
+    /// For SQL Server, the port is part of ServerName.
+    /// </summary>
+    public int? Port { get; set; }
 
     public DateTime CreatedDate { get; set; } = DateTime.Now;
 

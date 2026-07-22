@@ -40,8 +40,10 @@ export default function LoginPage() {
       toast.success("Login successful!");
       if (data.mustChangePassword) {
         navigate("/change-password", { replace: true });
-      } else if (data.role === "SuperAdmin") {
+      } else if (data.role === "SuperAdmin" || data.role === "Admin") {
         navigate("/admin", { replace: true });
+      } else if (data.assessmentType === "MCQ") {
+        navigate("/mcq-start", { replace: true });
       } else if (data.session?.databaseCreated) {
         navigate("/", { replace: true });
       } else {

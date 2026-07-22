@@ -51,7 +51,7 @@ public class ActivityController : ControllerBase
     /// Admin: Get tab-switch activity for all active users (real-time overview).
     /// </summary>
     [HttpGet("overview")]
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<IActionResult> GetActivityOverview()
     {
         var switchCounts = await _tabSwitchRepo.GetSwitchCountsForActiveUsersAsync();
@@ -74,7 +74,7 @@ public class ActivityController : ControllerBase
     /// Admin: Get detailed tab-switch logs for a specific user.
     /// </summary>
     [HttpGet("{userId}/logs")]
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<IActionResult> GetUserLogs(string userId)
     {
         var user = await _userRepo.GetByUserIDAsync(userId);
@@ -101,7 +101,7 @@ public class ActivityController : ControllerBase
     /// Admin: Get devtools detection attempts for all users.
     /// </summary>
     [HttpGet("devtools")]
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<IActionResult> GetDevToolsAttempts()
     {
         var users = await _userRepo.GetAllParticipantsAsync();
@@ -140,7 +140,7 @@ public class ActivityController : ControllerBase
     /// Admin: Get devtools detection attempts for a specific user.
     /// </summary>
     [HttpGet("devtools/{userId}")]
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public async Task<IActionResult> GetUserDevToolsAttempts(string userId)
     {
         var user = await _userRepo.GetByUserIDAsync(userId);

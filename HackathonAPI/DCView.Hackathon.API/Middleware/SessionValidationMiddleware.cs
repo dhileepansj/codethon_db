@@ -7,7 +7,7 @@ namespace DCView.Hackathon.API.Middleware;
 public class SessionValidationMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly string[] ProtectedPaths = { "/api/hackathon", "/api/schema", "/api/files", "/api/history", "/api/activity" };
+    private static readonly string[] ProtectedPaths = { "/api/hackathon", "/api/schema", "/api/files", "/api/history", "/api/activity", "/api/mcq/test" };
 
     public SessionValidationMiddleware(RequestDelegate next)
     {
@@ -33,9 +33,9 @@ public class SessionValidationMiddleware
             return;
         }
 
-        // SuperAdmin bypasses session validation
+        // SuperAdmin and Admin bypass session validation
         var role = context.User.FindFirst(ClaimTypes.Role)?.Value;
-        if (role == "SuperAdmin")
+        if (role == "SuperAdmin" || role == "Admin")
         {
             await _next(context);
             return;
@@ -55,7 +55,7 @@ public class SessionValidationMiddleware
         if (session == null || !session.IsActive)
         {
             // Allow status check even when inactive (so frontend can show proper screen)
-            bool isStatusCheck2 = path.Contains("/status");
+            bool isStatusCheck2 = path.Contains("/status") || path.Contains("/info");
             if (isStatusCheck2)
             {
                 await _next(context);
@@ -67,6 +67,22 @@ public class SessionValidationMiddleware
             return;
         }
 
+        // Activity logging (tab-switch, devtools) is ALWAYS allowed when session is active
+        bool isActivityLog = path.StartsWith("/api/activity");
+        if (isActivityLog)
+        {
+            await _next(context);
+            return;
+        }
+
+        // MCQ test endpoints don't require database creation
+        bool isMcqEndpoint = path.StartsWith("/api/mcq");
+        if (isMcqEndpoint)
+        {
+            await _next(context);
+            return;
+        }
+
         // Check expiry
         bool isExpired = session.ExpiresAt.HasValue && session.ExpiresAt < DateTimeHelper.Now;
 
@@ -74,7 +90,6 @@ public class SessionValidationMiddleware
         bool isFileOperation = path.StartsWith("/api/files");
         bool isHistoryView = path.StartsWith("/api/history");
         bool isSchemaView = path.StartsWith("/api/schema");
-        bool isActivityLog = path.StartsWith("/api/activity");
         bool isStatusCheck = path.Contains("/status");
         bool isSubmissionFileOp = path.Contains("/submission-files");
         bool isSubmitAction = path.Contains("/submit");
@@ -87,7 +102,7 @@ public class SessionValidationMiddleware
             return;
         }
 
-        if (isExpired && !isFileOperation && !isHistoryView && !isSchemaView && !isActivityLog && !isStatusCheck && !isSubmissionFileOp && !isSubmitAction)
+        if (isExpired && !isFileOperation && !isHistoryView && !isSchemaView && !isStatusCheck && !isSubmissionFileOp && !isSubmitAction)
         {
             context.Response.StatusCode = 403;
             await context.Response.WriteAsJsonAsync(new { message = "Session has expired. You can still save your scripts from the Files tab.", code = "SESSION_EXPIRED" });

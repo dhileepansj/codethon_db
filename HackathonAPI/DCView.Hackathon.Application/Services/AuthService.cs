@@ -3,9 +3,11 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using DCView.Hackathon.Application.DTOs.Auth;
+using DCView.Hackathon.Application.DTOs.Admin;
 using DCView.Hackathon.Application.Interfaces;
 using DCView.Hackathon.Domain.Entities;
 using DCView.Hackathon.Domain.Repositories;
@@ -18,70 +20,134 @@ public class AuthService : IAuthService
     private readonly IPasswordChangeLogRepository _passwordLogRepo;
     private readonly ISecuritySettingsRepository _securityRepo;
     private readonly IConfiguration _config;
+    private readonly DbContext _dbContext;
 
     public AuthService(
         IUserRepository userRepo,
         IPasswordChangeLogRepository passwordLogRepo,
         ISecuritySettingsRepository securityRepo,
-        IConfiguration config)
+        IConfiguration config,
+        DbContext dbContext)
     {
         _userRepo = userRepo;
         _passwordLogRepo = passwordLogRepo;
         _securityRepo = securityRepo;
         _config = config;
+        _dbContext = dbContext;
     }
 
     public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto request)
     {
+        // First check participant/superadmin users
         var user = await _userRepo.GetByUserIDAsync(request.UserID);
-        if (user == null || !user.IsActive)
-            return null;
 
-        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            return null;
-
-        // Track login
-        user.LastLoginAt = DateTimeHelper.Now;
-        user.LoginCount++;
-        await _userRepo.UpdateAsync(user);
-
-        var token = GenerateJwtToken(user.Id, user.UserID, user.Role);
-
-        SessionInfoDto? sessionInfo = null;
-        if (user.Session != null)
+        if (user != null && user.IsActive && BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
-            int? remaining = null;
-            if (user.Session.ExpiresAt.HasValue)
+            // Track login
+            user.LastLoginAt = DateTimeHelper.Now;
+            user.LoginCount++;
+            await _userRepo.UpdateAsync(user);
+
+            var token = GenerateJwtToken(user.Id, user.UserID, user.Role);
+
+            SessionInfoDto? sessionInfo = null;
+            if (user.Session != null)
             {
-                remaining = (int)(user.Session.ExpiresAt.Value - DateTimeHelper.Now).TotalMinutes;
-                if (remaining < 0) remaining = 0;
+                int? remaining = null;
+                if (user.Session.ExpiresAt.HasValue)
+                {
+                    remaining = (int)(user.Session.ExpiresAt.Value - DateTimeHelper.Now).TotalMinutes;
+                    if (remaining < 0) remaining = 0;
+                }
+
+                sessionInfo = new SessionInfoDto
+                {
+                    IsActive = user.Session.IsActive,
+                    DatabaseCreated = user.Session.DatabaseCreated,
+                    DatabaseName = user.Session.DatabaseName,
+                    ExpiresAt = user.Session.ExpiresAt,
+                    RemainingMinutes = remaining
+                };
             }
 
-            sessionInfo = new SessionInfoDto
+            return new LoginResponseDto
             {
-                IsActive = user.Session.IsActive,
-                DatabaseCreated = user.Session.DatabaseCreated,
-                DatabaseName = user.Session.DatabaseName,
-                ExpiresAt = user.Session.ExpiresAt,
-                RemainingMinutes = remaining
+                Token = token,
+                UserID = user.UserID,
+                Role = user.Role,
+                FullName = user.FullName,
+                MustChangePassword = user.MustChangePassword,
+                DbEnginePreference = user.DbEnginePreference.ToString(),
+                AssessmentType = user.Assessment?.Type ?? "SQL",
+                AssessmentSubType = user.Assessment?.SubType,
+                AssessmentId = user.AssessmentId,
+                Session = sessionInfo
             };
         }
 
-        return new LoginResponseDto
+        // Check admin users table
+        var adminUser = await _dbContext.Set<AdminUser>()
+            .FirstOrDefaultAsync(a => a.UserID == request.UserID && a.IsActive);
+
+        if (adminUser != null && BCrypt.Net.BCrypt.Verify(request.Password, adminUser.PasswordHash))
         {
-            Token = token,
-            UserID = user.UserID,
-            Role = user.Role,
-            FullName = user.FullName,
-            MustChangePassword = user.MustChangePassword,
-            Session = sessionInfo
-        };
+            adminUser.LastLoginAt = DateTimeHelper.Now;
+            await _dbContext.SaveChangesAsync();
+
+            var token = GenerateJwtToken(adminUser.Id, adminUser.UserID, adminUser.Role);
+
+            return new LoginResponseDto
+            {
+                Token = token,
+                UserID = adminUser.UserID,
+                Role = adminUser.Role,
+                FullName = adminUser.FullName,
+                MustChangePassword = adminUser.MustChangePassword,
+                Permissions = new AdminPermissionsDto
+                {
+                    CanManageUsers = adminUser.CanManageUsers,
+                    CanManageSessions = adminUser.CanManageSessions,
+                    CanViewMonitoring = adminUser.CanViewMonitoring,
+                    CanManageAssessments = adminUser.CanManageAssessments,
+                    CanViewResults = adminUser.CanViewResults,
+                    CanManageHackathonSetup = adminUser.CanManageHackathonSetup,
+                    CanManageServerConfig = adminUser.CanManageServerConfig,
+                    CanManageScaffoldScripts = adminUser.CanManageScaffoldScripts,
+                    CanManageSecuritySettings = adminUser.CanManageSecuritySettings,
+                    CanManageAiDetection = adminUser.CanManageAiDetection,
+                    CanExportData = adminUser.CanExportData,
+                    CanResetDatabase = adminUser.CanResetDatabase,
+                    CanDeleteUsers = adminUser.CanDeleteUsers
+                }
+            };
+        }
+
+        return null;
     }
 
     public async Task<bool> ChangePasswordAsync(int userId, string newPassword, string? changedByUserId = null, string? ipAddress = null)
     {
         var user = await _userRepo.GetByIdAsync(userId);
-        if (user == null) return false;
+
+        // Check if it's an admin user instead
+        if (user == null)
+        {
+            var adminUser = await _dbContext.Set<AdminUser>().FindAsync(userId);
+            if (adminUser == null) return false;
+
+            // Simple validation for admin
+            if (newPassword.Length < 8)
+                throw new InvalidOperationException("Password must be at least 8 characters.");
+
+            if (BCrypt.Net.BCrypt.Verify(newPassword, adminUser.PasswordHash))
+                throw new InvalidOperationException("New password cannot be the same as your current password.");
+
+            adminUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, 12);
+            adminUser.MustChangePassword = false;
+            adminUser.ModifiedDate = DateTimeHelper.Now;
+            await _dbContext.SaveChangesAsync();
+            return true;
+        }
 
         var settings = await _securityRepo.GetAsync();
 

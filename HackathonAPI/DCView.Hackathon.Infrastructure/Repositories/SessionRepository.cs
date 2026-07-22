@@ -27,6 +27,12 @@ public class SessionRepository : ISessionRepository
         await _db.SaveChangesAsync();
     }
 
+    public async Task DeleteAsync(HackathonSession session)
+    {
+        _db.Sessions.Remove(session);
+        await _db.SaveChangesAsync();
+    }
+
     public async Task<IEnumerable<HackathonSession>> GetAllActiveSessionsAsync()
         => await _db.Sessions
             .Include(s => s.User)

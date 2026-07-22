@@ -9,6 +9,9 @@ import ChangePasswordPage from "./pages/ChangePasswordPage";
 import WorkspacePage from "./pages/WorkspacePage";
 import AdminPage from "./pages/AdminPage";
 import CreateDatabasePage from "./pages/CreateDatabasePage";
+import McqStartPage from "./pages/McqStartPage";
+import McqTestPage from "./pages/McqTestPage";
+import SecurityShield from "./components/common/SecurityShield";
 
 const BASEPATH = import.meta.env.VITE_APP_BASEPATH || "/novaccodelab";
 
@@ -24,7 +27,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useSelector((s: RootState) => s.auth);
-  if (!user || user.role !== "SuperAdmin") return <Navigate to="/" replace />;
+  if (!user || (user.role !== "SuperAdmin" && user.role !== "Admin")) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -59,6 +62,26 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <CreateDatabasePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mcq-start"
+            element={
+              <ProtectedRoute>
+                <SecurityShield tabSwitch devTools>
+                  <McqStartPage />
+                </SecurityShield>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mcq-test"
+            element={
+              <ProtectedRoute>
+                <SecurityShield tabSwitch devTools>
+                  <McqTestPage />
+                </SecurityShield>
               </ProtectedRoute>
             }
           />

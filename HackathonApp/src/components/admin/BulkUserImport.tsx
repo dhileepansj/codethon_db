@@ -9,7 +9,7 @@ interface BulkUserImportProps {
 }
 
 export default function BulkUserImport({ onComplete, onClose }: BulkUserImportProps) {
-  const [users, setUsers] = useState<{ UserID: string; Password: string; FullName: string; Email: string }[]>([]);
+  const [users, setUsers] = useState<{ UserID: string; Password: string; FullName: string; Email: string; DbEnginePreference?: string }[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -31,6 +31,7 @@ export default function BulkUserImport({ onComplete, onClose }: BulkUserImportPr
           Password: parts[1] || "",
           FullName: parts[2] || "",
           Email: parts[3] || "",
+          DbEnginePreference: parts[4]?.toLowerCase() === "oracle" ? "Oracle" : "SqlServer",
         };
       }).filter((u) => u.UserID && u.Password);
 
