@@ -104,27 +104,19 @@ public class OracleEngine : IDbEngine
 
         // Create user (schema)
         using var createUserCmd = conn.CreateCommand();
-        createUserCmd.CommandText = $"CREATE USER \"{schemaName}\" IDENTIFIED BY \"{loginPassword}\" DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP QUOTA UNLIMITED ON USERS";
+        createUserCmd.CommandText = $"CREATE USER {schemaName} IDENTIFIED BY \"{loginPassword}\" DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP QUOTA UNLIMITED ON USERS";
         createUserCmd.CommandTimeout = 60;
         await createUserCmd.ExecuteNonQueryAsync();
 
         // Grant privileges
-        using var grantCmd = conn.CreateCommand();
-        grantCmd.CommandText = $@"
-            GRANT CONNECT, RESOURCE TO ""{schemaName}"" .
-            GRANT CREATE VIEW TO ""{schemaName}"" .
-            GRANT CREATE PROCEDURE TO ""{schemaName}"" .
-            GRANT CREATE TRIGGER TO ""{schemaName}"" .
-            GRANT CREATE SEQUENCE TO ""{schemaName}""";
-
         // Execute grants individually (Oracle doesn't support multi-statement in one command)
         var grants = new[]
         {
-            $"GRANT CONNECT, RESOURCE TO \"{schemaName}\"",
-            $"GRANT CREATE VIEW TO \"{schemaName}\"",
-            $"GRANT CREATE PROCEDURE TO \"{schemaName}\"",
-            $"GRANT CREATE TRIGGER TO \"{schemaName}\"",
-            $"GRANT CREATE SEQUENCE TO \"{schemaName}\""
+            $"GRANT CONNECT, RESOURCE TO {schemaName}",
+            $"GRANT CREATE VIEW TO {schemaName}",
+            $"GRANT CREATE PROCEDURE TO {schemaName}",
+            $"GRANT CREATE TRIGGER TO {schemaName}",
+            $"GRANT CREATE SEQUENCE TO {schemaName}"
         };
 
         foreach (var grant in grants)
@@ -285,7 +277,7 @@ public class OracleEngine : IDbEngine
         int port = config.Port ?? 1521;
         string serviceName = config.OracleServiceName ?? "XEPDB1";
         // session.DatabaseName is the schema/user name in Oracle
-        return $"Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={config.ServerName})(PORT={port}))(CONNECT_DATA=(SERVICE_NAME={serviceName})));User Id=\"{session.DatabaseName}\";Password=\"{loginPassword}\";Connection Timeout={config.MaxQueryTimeoutSeconds};";
+        return $"Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={config.ServerName})(PORT={port}))(CONNECT_DATA=(SERVICE_NAME={serviceName})));User Id={session.DatabaseName};Password={loginPassword};Connection Timeout={config.MaxQueryTimeoutSeconds};";
     }
 
     public string? ValidateBatchSafety(string batch)
@@ -621,7 +613,7 @@ public class OracleEngine : IDbEngine
     {
         int port = config.Port ?? 1521;
         string serviceName = config.OracleServiceName ?? "XEPDB1";
-        return $"Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={config.ServerName})(PORT={port}))(CONNECT_DATA=(SERVICE_NAME={serviceName})));User Id=\"{config.AdminUserId}\";Password=\"{adminPassword}\";Connection Timeout=30;";
+        return $"Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={config.ServerName})(PORT={port}))(CONNECT_DATA=(SERVICE_NAME={serviceName})));User Id={config.AdminUserId};Password={adminPassword};Connection Timeout=30;";
     }
 
     private static async Task<BatchResultDto> ExecuteSelectBatchAsync(OracleCommand cmd, int page, int pageSize)

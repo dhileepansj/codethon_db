@@ -207,6 +207,28 @@ export default function AdminPage() {
     } catch (err: any) { toast.error(err.response?.data?.message || "Failed"); }
   };
 
+  const loadServerConfig = async (engineType: string) => {
+    try {
+      const res = await httpClient.get(`/api/admin/config/hackathon-server`, { params: { engineType } });
+      const config = res.data.data || res.data;
+      if (config?.configured) {
+        setServerConfig({
+          ServerName: config.serverName || "",
+          AdminUserId: config.adminUserId || "",
+          AdminPassword: "",
+          DbPrefix: config.dbPrefix || (engineType === "Oracle" ? "HACK_" : "Hackathon_"),
+          DbEngineType: engineType,
+          OracleServiceName: config.oracleServiceName || "",
+          Port: config.port ? String(config.port) : "1521"
+        });
+      } else {
+        setServerConfig({ ServerName: "", AdminUserId: "", AdminPassword: "", DbPrefix: engineType === "Oracle" ? "HACK_" : "Hackathon_", DbEngineType: engineType, OracleServiceName: "", Port: "1521" });
+      }
+    } catch {
+      setServerConfig({ ServerName: "", AdminUserId: "", AdminPassword: "", DbPrefix: engineType === "Oracle" ? "HACK_" : "Hackathon_", DbEngineType: engineType, OracleServiceName: "", Port: "1521" });
+    }
+  };
+
   const handleLogout = () => { dispatch(logout()); navigate("/login", { replace: true }); };
 
   // ─── Render ─────────────────────────────────────────────────────
@@ -235,7 +257,12 @@ export default function AdminPage() {
           {can("canManageHackathonSetup") && <SidebarItem icon={<Calendar className="h-4 w-4" />} label="DB Hackathon Setup" active={false} onClick={() => setShowHackathonSetup(true)} />}
           {can("canManageAssessments") && <SidebarItem icon={<ClipboardList className="h-4 w-4" />} label="MCQ Assessments" active={false} onClick={() => setShowMcqPanel(true)} />}
           {can("canManageManualTesting") && <SidebarItem icon={<FileSpreadsheet className="h-4 w-4" />} label="Manual Testing" active={false} onClick={() => setShowManualTestSetup(true)} />}
-          {can("canManageServerConfig") && <SidebarItem icon={<Settings className="h-4 w-4" />} label="Server Config" active={false} onClick={() => setShowServerConfig(true)} />}
+          {can("canManageServerConfig") && <SidebarItem icon={<Settings className="h-4 w-4" />} label="Server Config" active={false} onClick={() => {
+            setShowServerConfig(true);
+            setServerConfig({ ServerName: "", AdminUserId: "", AdminPassword: "", DbPrefix: "Hackathon_", DbEngineType: "SqlServer", OracleServiceName: "", Port: "1521" });
+            // Load SQL Server config by default
+            loadServerConfig("SqlServer");
+          }} />}
           {isSuperAdmin && <SidebarItem icon={<Shield className="h-4 w-4" />} label="Admin Users" active={false} onClick={() => setShowAdminUsers(true)} />}
         </nav>
 
@@ -523,14 +550,14 @@ export default function AdminPage() {
           <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
             <button
               type="button"
-              onClick={() => setServerConfig({ ...serverConfig, DbEngineType: "SqlServer", DbPrefix: "Hackathon_" })}
+              onClick={() => loadServerConfig("SqlServer")}
               className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${serverConfig.DbEngineType === "SqlServer" ? "bg-white dark:bg-gray-700 text-teal-700 dark:text-teal-300 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
             >
               SQL Server
             </button>
             <button
               type="button"
-              onClick={() => setServerConfig({ ...serverConfig, DbEngineType: "Oracle", DbPrefix: "HACK_" })}
+              onClick={() => loadServerConfig("Oracle")}
               className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${serverConfig.DbEngineType === "Oracle" ? "bg-white dark:bg-gray-700 text-teal-700 dark:text-teal-300 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
             >
               Oracle

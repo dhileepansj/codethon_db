@@ -211,9 +211,18 @@ public class AdminController : ControllerBase
     // ─── Hackathon Server Config ─────────────────────────────────
 
     [HttpGet("config/hackathon-server")]
-    public async Task<IActionResult> GetHackathonConfig()
+    public async Task<IActionResult> GetHackathonConfig([FromQuery] string? engineType)
     {
-        var config = await _configRepo.GetActiveConfigAsync();
+        Domain.Entities.HackathonConfig? config;
+        if (!string.IsNullOrEmpty(engineType) && Enum.TryParse<Domain.Enums.DbEngineType>(engineType, ignoreCase: true, out var dbEngine))
+        {
+            config = await _configRepo.GetActiveConfigAsync(dbEngine);
+        }
+        else
+        {
+            config = await _configRepo.GetActiveConfigAsync();
+        }
+
         if (config == null)
             return Ok(new { configured = false });
 
