@@ -195,6 +195,108 @@ public class SurveyDashboardService : ISurveyDashboardService
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
+    public async Task<byte[]> ExportResponsesExcelAsync(Guid surveyId)
+    {
+        var survey = await _surveyRepo.GetByIdAsync(surveyId);
+        var fields = (await _fieldRepo.GetBySurveyIdAsync(surveyId))
+            .Where(f => f.FieldType != SurveyFieldType.Section && f.FieldType != SurveyFieldType.Paragraph)
+            .ToList();
+
+        var responses = await _responseRepo.GetBySurveyIdAsync(surveyId, 1, 100000);
+
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+        var ws = workbook.Worksheets.Add("Responses");
+
+        // Title
+        ws.Cell(1, 1).Value = survey?.Title ?? "Survey Responses";
+        ws.Range(1, 1, 1, 4 + fields.Count).Merge();
+        ws.Cell(1, 1).Style.Font.Bold = true;
+        ws.Cell(1, 1).Style.Font.FontSize = 14;
+
+        ws.Cell(2, 1).Value = $"Exported: {DateTime.Now:dd-MMM-yyyy HH:mm} | Total Responses: {responses.Count()}";
+        ws.Cell(2, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.Gray;
+        ws.Cell(2, 1).Style.Font.FontSize = 10;
+
+        // Headers (row 4)
+        var baseHeaders = new[] { "Employee ID", "Employee Name", "Email", "Submitted At" };
+        int col = 1;
+        foreach (var h in baseHeaders)
+        {
+            var cell = ws.Cell(4, col);
+            cell.Value = h;
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#1F4E79");
+            cell.Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+            cell.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+            cell.Style.Alignment.WrapText = true;
+            cell.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+            col++;
+        }
+
+        foreach (var field in fields)
+        {
+            var cell = ws.Cell(4, col);
+            cell.Value = field.Label;
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#2E75B6");
+            cell.Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+            cell.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+            cell.Style.Alignment.WrapText = true;
+            cell.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+            col++;
+        }
+
+        ws.SheetView.FreezeRows(4);
+
+        // Data rows
+        int row = 5;
+        foreach (var response in responses)
+        {
+            var fullResponse = await _responseRepo.GetByIdWithAnswersAsync(response.Id);
+            if (fullResponse == null) continue;
+
+            ws.Cell(row, 1).Value = fullResponse.Participant?.EmployeeId ?? "";
+            ws.Cell(row, 2).Value = fullResponse.Participant?.EmployeeName ?? "";
+            ws.Cell(row, 3).Value = fullResponse.Participant?.EmployeeEmail ?? "";
+            ws.Cell(row, 4).Value = fullResponse.SubmittedAt.ToString("yyyy-MM-dd HH:mm:ss");
+
+            col = 5;
+            foreach (var field in fields)
+            {
+                var answer = fullResponse.Answers.FirstOrDefault(a => a.FieldId == field.Id);
+                ws.Cell(row, col).Value = answer?.Value ?? "";
+                ws.Cell(row, col).Style.Alignment.WrapText = true;
+                ws.Cell(row, col).Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+                col++;
+            }
+
+            // Base column borders
+            for (int c = 1; c <= 4; c++)
+                ws.Cell(row, c).Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+
+            // Alternating rows
+            if (row % 2 == 0)
+                ws.Range(row, 1, row, 4 + fields.Count).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#F2F7FC");
+
+            row++;
+        }
+
+        // Auto-filter and column widths
+        var totalCols = 4 + fields.Count;
+        if (row > 5)
+            ws.Range(4, 1, row - 1, totalCols).SetAutoFilter();
+
+        ws.Columns().AdjustToContents();
+        for (int c = 5; c <= totalCols; c++)
+        {
+            if (ws.Column(c).Width > 30) ws.Column(c).Width = 30;
+        }
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
     // Helper methods
     private static List<OptionCountDto> GetOptionBreakdown(List<string> answers, int total)
     {

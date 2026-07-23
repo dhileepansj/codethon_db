@@ -19,7 +19,19 @@ export default function SurveyDashboardPage() {
   useEffect(() => { if (surveyId) loadDashboard(); }, [surveyId]);
 
   async function loadDashboard() { try { const [d, r, a] = await Promise.all([dashboardApi.getSummary(surveyId!), dashboardApi.getResponses(surveyId!), dashboardApi.getAnalytics(surveyId!)]); setDashboard(d); setResponses(r); setAnalytics(a); } catch { toast.error('Failed to load dashboard'); } finally { setLoading(false); } }
-  async function handleExport() { try { const blob = await dashboardApi.export(surveyId!); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `survey_responses.csv`; a.click(); URL.revokeObjectURL(url); toast.success('Export downloaded'); } catch { toast.error('Export failed'); } }
+  async function handleExport(format: "csv" | "excel" = "csv") {
+    try {
+      if (format === "excel") {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/surveys/${surveyId}/dashboard/export-excel`, { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } });
+        if (!res.ok) { toast.error('Export failed'); return; }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `survey_responses.xlsx`; a.click(); URL.revokeObjectURL(url);
+      } else {
+        const blob = await dashboardApi.export(surveyId!); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `survey_responses.csv`; a.click(); URL.revokeObjectURL(url);
+      }
+      toast.success('Export downloaded');
+    } catch { toast.error('Export failed'); }
+  }
   async function handleViewResponse(responseId: string) { try { const detail = await dashboardApi.getResponseDetail(surveyId!, responseId); setSelectedResponse(detail); } catch { toast.error('Failed to load response'); } }
 
   if (loading) return <SurveyAdminLayout><div className="flex items-center justify-center h-64 text-gray-500">Loading dashboard...</div></SurveyAdminLayout>;
@@ -30,7 +42,10 @@ export default function SurveyDashboardPage() {
       <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950">
         <header className="h-14 bg-white dark:bg-gray-900 border-b dark:border-gray-800 flex items-center justify-between px-6 sticky top-0 z-10">
           <div><h1 className="text-base font-semibold text-gray-800 dark:text-gray-100">{dashboard.title}</h1><p className="text-xs text-gray-500">Survey Dashboard</p></div>
-          <button onClick={handleExport} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-teal-600 hover:bg-teal-700 text-white rounded-md font-medium"><Download className="w-3.5 h-3.5" /> Export CSV</button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => handleExport("excel")} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-medium"><Download className="w-3.5 h-3.5" /> Export Excel</button>
+            <button onClick={() => handleExport("csv")} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded-md font-medium"><Download className="w-3.5 h-3.5" /> Export CSV</button>
+          </div>
         </header>
 
         <div className="p-6 max-w-7xl mx-auto">

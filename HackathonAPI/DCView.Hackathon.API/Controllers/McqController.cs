@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -329,6 +330,257 @@ public class McqController : ControllerBase
     private static string EscapeCsv(string text)
     {
         return text.Replace("\"", "\"\"").Replace("\n", " ").Replace("\r", "");
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ADMIN: Excel Exports
+    // ═══════════════════════════════════════════════════════════════
+
+    [HttpGet("assessments/{assessmentId:int}/results/download-excel")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
+    public async Task<IActionResult> DownloadResultsExcel(int assessmentId)
+    {
+        var results = await _mcqService.GetAllTestResultsAsync(assessmentId);
+        var resultList = results.ToList();
+
+        if (resultList.Count == 0)
+            return BadRequest(new { message = "No results to export" });
+
+        var assessmentTitle = resultList.FirstOrDefault()?.AssessmentTitle ?? "MCQ";
+
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add("MCQ Results");
+
+        // Title
+        ws.Cell(1, 1).Value = $"{assessmentTitle} — Summary Results";
+        ws.Range(1, 1, 1, 15).Merge();
+        ws.Cell(1, 1).Style.Font.Bold = true;
+        ws.Cell(1, 1).Style.Font.FontSize = 14;
+
+        ws.Cell(2, 1).Value = $"Exported: {DateTime.Now:dd-MMM-yyyy HH:mm}";
+        ws.Cell(2, 1).Style.Font.FontColor = XLColor.Gray;
+        ws.Cell(2, 1).Style.Font.FontSize = 10;
+
+        // Headers (row 4)
+        var headers = new[] { "S.No", "User ID", "Full Name", "Score", "Max Score", "Percentage", "Correct", "Wrong", "Skipped", "Total Questions", "Passed", "Auto Submitted", "Time Spent (min)", "Started At", "Submitted At" };
+        for (int i = 0; i < headers.Length; i++)
+        {
+            var cell = ws.Cell(4, i + 1);
+            cell.Value = headers[i];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1F4E79");
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        }
+
+        ws.SheetView.FreezeRows(4);
+
+        // Data rows
+        for (int i = 0; i < resultList.Count; i++)
+        {
+            var r = resultList[i];
+            int row = i + 5;
+
+            ws.Cell(row, 1).Value = i + 1;
+            ws.Cell(row, 2).Value = r.UserID;
+            ws.Cell(row, 3).Value = r.FullName ?? "";
+            ws.Cell(row, 4).Value = r.Score;
+            ws.Cell(row, 5).Value = r.MaxScore;
+            ws.Cell(row, 6).Value = r.Percentage;
+            ws.Cell(row, 7).Value = r.Correct;
+            ws.Cell(row, 8).Value = r.Wrong;
+            ws.Cell(row, 9).Value = r.Skipped;
+            ws.Cell(row, 10).Value = r.TotalQuestions;
+            ws.Cell(row, 11).Value = r.Passed == true ? "Yes" : r.Passed == false ? "No" : "N/A";
+            ws.Cell(row, 12).Value = r.IsAutoSubmitted ? "Yes" : "No";
+            ws.Cell(row, 13).Value = r.TimeSpentSeconds.HasValue ? Math.Round(r.TimeSpentSeconds.Value / 60.0, 1) : 0;
+            ws.Cell(row, 14).Value = r.StartedAt?.ToString("yyyy-MM-dd HH:mm") ?? "";
+            ws.Cell(row, 15).Value = r.SubmittedAt?.ToString("yyyy-MM-dd HH:mm") ?? "";
+
+            // Conditional formatting for pass/fail
+            if (r.Passed == true)
+                ws.Cell(row, 11).Style.Font.FontColor = XLColor.FromHtml("#217346");
+            else if (r.Passed == false)
+                ws.Cell(row, 11).Style.Font.FontColor = XLColor.FromHtml("#C00000");
+
+            // Percentage color coding
+            if (r.Percentage >= 80)
+                ws.Cell(row, 6).Style.Font.FontColor = XLColor.FromHtml("#217346");
+            else if (r.Percentage >= 50)
+                ws.Cell(row, 6).Style.Font.FontColor = XLColor.FromHtml("#BF8F00");
+            else
+                ws.Cell(row, 6).Style.Font.FontColor = XLColor.FromHtml("#C00000");
+
+            // Borders + alternating rows
+            for (int col = 1; col <= 15; col++)
+                ws.Cell(row, col).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            if (row % 2 == 0)
+                ws.Range(row, 1, row, 15).Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F7FC");
+        }
+
+        // Auto-filter
+        ws.Range(4, 1, 4 + resultList.Count, 15).SetAutoFilter();
+        ws.Columns().AdjustToContents();
+        ws.Column(1).Width = 6;
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"MCQ_Results_{assessmentTitle}_{DateTime.Now:yyyyMMdd}.xlsx");
+    }
+
+    [HttpGet("assessments/{assessmentId:int}/results/download-detailed-excel")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
+    public async Task<IActionResult> DownloadDetailedResultsExcel(int assessmentId)
+    {
+        var db = HttpContext.RequestServices.GetRequiredService<DCView.Hackathon.Infrastructure.Data.HackathonDbContext>();
+
+        var tests = await db.McqTests
+            .Include(t => t.User)
+            .Include(t => t.Answers).ThenInclude(a => a.Question)
+            .Where(t => t.AssessmentId == assessmentId && t.IsSubmitted)
+            .OrderBy(t => t.User.UserID)
+            .ToListAsync();
+
+        if (tests.Count == 0)
+            return BadRequest(new { message = "No results to export" });
+
+        var assessment = await db.Set<DCView.Hackathon.Domain.Entities.Assessment>().FindAsync(assessmentId);
+        var assessmentTitle = assessment?.Title ?? "MCQ";
+
+        using var workbook = new XLWorkbook();
+
+        // ─── Sheet 1: Summary ─────────────────────────────────────
+        var summaryWs = workbook.Worksheets.Add("Summary");
+        summaryWs.Cell(1, 1).Value = $"{assessmentTitle} — Detailed Results";
+        summaryWs.Range(1, 1, 1, 10).Merge();
+        summaryWs.Cell(1, 1).Style.Font.Bold = true;
+        summaryWs.Cell(1, 1).Style.Font.FontSize = 14;
+
+        var sumHeaders = new[] { "S.No", "User ID", "Full Name", "Score", "Max Score", "%", "Correct", "Wrong", "Skipped", "Passed" };
+        for (int i = 0; i < sumHeaders.Length; i++)
+        {
+            var cell = summaryWs.Cell(3, i + 1);
+            cell.Value = sumHeaders[i];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1F4E79");
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        }
+
+        for (int i = 0; i < tests.Count; i++)
+        {
+            var t = tests[i];
+            int row = i + 4;
+            summaryWs.Cell(row, 1).Value = i + 1;
+            summaryWs.Cell(row, 2).Value = t.User.UserID;
+            summaryWs.Cell(row, 3).Value = t.User.FullName ?? "";
+            summaryWs.Cell(row, 4).Value = t.Score;
+            summaryWs.Cell(row, 5).Value = t.MaxScore;
+            summaryWs.Cell(row, 6).Value = t.Percentage;
+            summaryWs.Cell(row, 7).Value = t.Correct;
+            summaryWs.Cell(row, 8).Value = t.Wrong;
+            summaryWs.Cell(row, 9).Value = t.Skipped;
+            summaryWs.Cell(row, 10).Value = t.Passed == true ? "Pass" : "Fail";
+
+            if (t.Passed == true)
+                summaryWs.Cell(row, 10).Style.Font.FontColor = XLColor.FromHtml("#217346");
+            else
+                summaryWs.Cell(row, 10).Style.Font.FontColor = XLColor.FromHtml("#C00000");
+
+            for (int col = 1; col <= 10; col++)
+                summaryWs.Cell(row, col).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            if (row % 2 == 0)
+                summaryWs.Range(row, 1, row, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F7FC");
+        }
+        summaryWs.Columns().AdjustToContents();
+
+        // ─── Sheet 2: Detailed Answers ────────────────────────────
+        var detailWs = workbook.Worksheets.Add("Detailed Answers");
+        detailWs.Cell(1, 1).Value = $"{assessmentTitle} — Question-wise Analysis";
+        detailWs.Range(1, 1, 1, 12).Merge();
+        detailWs.Cell(1, 1).Style.Font.Bold = true;
+        detailWs.Cell(1, 1).Style.Font.FontSize = 14;
+
+        var detailHeaders = new[] { "User ID", "Full Name", "Score", "%", "Q.No", "Question", "Selected Answer", "Correct Answer", "Is Correct", "Marks", "Complexity", "Category" };
+        for (int i = 0; i < detailHeaders.Length; i++)
+        {
+            var cell = detailWs.Cell(3, i + 1);
+            cell.Value = detailHeaders[i];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#2E75B6");
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            cell.Style.Alignment.WrapText = true;
+            cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        }
+        detailWs.SheetView.FreezeRows(3);
+
+        int dataRow = 4;
+        string? prevUser = null;
+        foreach (var test in tests)
+        {
+            foreach (var answer in test.Answers.OrderBy(a => a.QuestionIndex))
+            {
+                var q = answer.Question;
+                var selectedText = answer.SelectedAnswer != null
+                    ? $"{answer.SelectedAnswer}. {GetOptionText(q, answer.SelectedAnswer)}"
+                    : "(Skipped)";
+                var correctText = $"{q.CorrectAnswer}. {GetOptionText(q, q.CorrectAnswer)}";
+                var isNewUser = test.User.UserID != prevUser;
+                prevUser = test.User.UserID;
+
+                detailWs.Cell(dataRow, 1).Value = isNewUser ? test.User.UserID : "";
+                detailWs.Cell(dataRow, 2).Value = isNewUser ? (test.User.FullName ?? "") : "";
+                if (isNewUser)
+                {
+                    detailWs.Cell(dataRow, 3).Value = test.Score;
+                    detailWs.Cell(dataRow, 4).Value = test.Percentage;
+                }
+                detailWs.Cell(dataRow, 5).Value = answer.QuestionIndex;
+                detailWs.Cell(dataRow, 6).Value = q.Question;
+                detailWs.Cell(dataRow, 7).Value = selectedText;
+                detailWs.Cell(dataRow, 8).Value = correctText;
+                detailWs.Cell(dataRow, 9).Value = answer.IsCorrect == true ? "✓" : answer.IsCorrect == false ? "✗" : "—";
+                detailWs.Cell(dataRow, 10).Value = answer.MarksAwarded;
+                detailWs.Cell(dataRow, 11).Value = q.Complexity;
+                detailWs.Cell(dataRow, 12).Value = q.Category ?? "";
+
+                // Color correct/wrong
+                if (answer.IsCorrect == true)
+                    detailWs.Cell(dataRow, 9).Style.Font.FontColor = XLColor.FromHtml("#217346");
+                else if (answer.IsCorrect == false)
+                    detailWs.Cell(dataRow, 9).Style.Font.FontColor = XLColor.FromHtml("#C00000");
+
+                for (int col = 1; col <= 12; col++)
+                    detailWs.Cell(dataRow, col).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+                if (dataRow % 2 == 0)
+                    detailWs.Range(dataRow, 1, dataRow, 12).Style.Fill.BackgroundColor = XLColor.FromHtml("#F9FAFB");
+
+                dataRow++;
+            }
+        }
+
+        detailWs.Range(3, 1, dataRow - 1, 12).SetAutoFilter();
+        detailWs.Columns().AdjustToContents();
+        if (detailWs.Column(6).Width > 50) detailWs.Column(6).Width = 50;
+        if (detailWs.Column(7).Width > 35) detailWs.Column(7).Width = 35;
+        if (detailWs.Column(8).Width > 35) detailWs.Column(8).Width = 35;
+        detailWs.Column(6).Style.Alignment.WrapText = true;
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"MCQ_Detailed_{assessmentTitle}_{DateTime.Now:yyyyMMdd}.xlsx");
     }
 
     // ═══════════════════════════════════════════════════════════════

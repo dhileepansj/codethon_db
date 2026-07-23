@@ -1,3 +1,4 @@
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using DCView.Hackathon.Application.Interfaces;
@@ -51,5 +52,13 @@ public class SurveyDashboardController : ControllerBase
     {
         var bytes = await _dashboardService.ExportResponsesAsync(surveyId);
         return File(bytes, "text/csv", $"survey_responses_{surveyId:N}.csv");
+    }
+
+    [HttpGet("export-excel")]
+    public async Task<IActionResult> ExportExcel(Guid surveyId)
+    {
+        var bytes = await _dashboardService.ExportResponsesExcelAsync(surveyId);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"survey_responses_{surveyId:N}.xlsx");
     }
 }

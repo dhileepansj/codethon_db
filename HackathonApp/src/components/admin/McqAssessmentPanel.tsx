@@ -470,10 +470,13 @@ function ResultsView({ assessmentId }: { assessmentId: number }) {
       .finally(() => setLoading(false));
   }, [assessmentId]);
 
-  const handleDownload = async () => {
+  const handleDownload = async (format: "csv" | "excel" = "csv") => {
     try {
+      const endpoint = format === "excel"
+        ? `/api/mcq/assessments/${assessmentId}/results/download-excel`
+        : `/api/mcq/assessments/${assessmentId}/results/download`;
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/mcq/assessments/${assessmentId}/results/download`,
+        `${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi${endpoint}`,
         { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } }
       );
       if (!res.ok) { toast.error("Download failed"); return; }
@@ -481,7 +484,7 @@ function ResultsView({ assessmentId }: { assessmentId: number }) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `MCQ_Results_${assessmentId}.csv`;
+      a.download = format === "excel" ? `MCQ_Results_${assessmentId}.xlsx` : `MCQ_Results_${assessmentId}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -489,10 +492,13 @@ function ResultsView({ assessmentId }: { assessmentId: number }) {
     } catch { toast.error("Download failed"); }
   };
 
-  const handleDetailedDownload = async () => {
+  const handleDetailedDownload = async (format: "csv" | "excel" = "csv") => {
     try {
+      const endpoint = format === "excel"
+        ? `/api/mcq/assessments/${assessmentId}/results/download-detailed-excel`
+        : `/api/mcq/assessments/${assessmentId}/results/download-detailed`;
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/mcq/assessments/${assessmentId}/results/download-detailed`,
+        `${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi${endpoint}`,
         { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } }
       );
       if (!res.ok) { toast.error("Download failed"); return; }
@@ -500,7 +506,7 @@ function ResultsView({ assessmentId }: { assessmentId: number }) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `MCQ_Detailed_${assessmentId}.csv`;
+      a.download = format === "excel" ? `MCQ_Detailed_${assessmentId}.xlsx` : `MCQ_Detailed_${assessmentId}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -513,11 +519,17 @@ function ResultsView({ assessmentId }: { assessmentId: number }) {
 
   return (
     <div className="overflow-auto">
-      <div className="flex justify-end mb-3 gap-2">
-        <button onClick={handleDownload} className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700">
+      <div className="flex justify-end mb-3 gap-2 flex-wrap">
+        <button onClick={() => handleDownload("excel")} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700">
+          <Download className="h-4 w-4" /> Summary Excel
+        </button>
+        <button onClick={() => handleDetailedDownload("excel")} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
+          <Download className="h-4 w-4" /> Detailed Excel
+        </button>
+        <button onClick={() => handleDownload("csv")} className="flex items-center gap-1.5 px-3 py-2 bg-gray-500 text-white text-sm font-medium rounded-lg hover:bg-gray-600">
           <Download className="h-4 w-4" /> Summary CSV
         </button>
-        <button onClick={handleDetailedDownload} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
+        <button onClick={() => handleDetailedDownload("csv")} className="flex items-center gap-1.5 px-3 py-2 bg-gray-500 text-white text-sm font-medium rounded-lg hover:bg-gray-600">
           <Download className="h-4 w-4" /> Detailed CSV
         </button>
       </div>

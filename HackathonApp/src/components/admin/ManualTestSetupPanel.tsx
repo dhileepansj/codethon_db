@@ -255,17 +255,20 @@ function SubmissionsView({ assessmentId }: { assessmentId: number }) {
       .finally(() => setLoading(false));
   }, [assessmentId]);
 
-  const handleExport = async () => {
+  const handleExport = async (format: "csv" | "excel" = "csv") => {
     try {
+      const endpoint = format === "excel"
+        ? `/api/manual-test/submissions/${assessmentId}/export-excel`
+        : `/api/manual-test/submissions/${assessmentId}/export`;
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/manual-test/submissions/${assessmentId}/export`,
+        `${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi${endpoint}`,
         { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } }
       );
       if (!res.ok) { toast.error("Export failed"); return; }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = `ManualTest_Export.csv`;
+      a.href = url; a.download = format === "excel" ? `ManualTest_Export.xlsx` : `ManualTest_Export.csv`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch { toast.error("Export failed"); }
@@ -276,8 +279,11 @@ function SubmissionsView({ assessmentId }: { assessmentId: number }) {
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
-        <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-md hover:bg-green-700">
+      <div className="flex justify-end gap-2 mb-3">
+        <button onClick={() => handleExport("excel")} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-md hover:bg-emerald-700">
+          <Download className="h-3.5 w-3.5" /> Export Excel
+        </button>
+        <button onClick={() => handleExport("csv")} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded-md hover:bg-gray-700">
           <Download className="h-3.5 w-3.5" /> Export CSV
         </button>
       </div>

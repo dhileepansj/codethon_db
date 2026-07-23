@@ -460,21 +460,21 @@ export default function AdminPage() {
                         {u.session?.isActive && <IconBtn icon={<Clock />} title="Extend" color="amber" onClick={() => setDialog({ type: "extend", userId: u.userID })} />}
                         {!isMcq && !isManualTest && u.session?.databaseCreated && <IconBtn icon={<RotateCcw />} title="Reset DB" color="orange" onClick={() => setDialog({ type: "resetDb", userId: u.userID })} />}
                         {u.session?.isSubmitted && <IconBtn icon={<Unlock />} title="Release Submission" color="amber" onClick={() => setDialog({ type: "releaseSubmission", userId: u.userID })} />}
-                        <IconBtn icon={<Download />} title="Export" color="blue" onClick={async () => {
+                        <IconBtn icon={<Download />} title="Export Excel" color="blue" onClick={async () => {
                           try {
                             if (isMcq && u.assessmentId) {
-                              const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/mcq/assessments/${u.assessmentId}/results/download`, { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } });
+                              const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/mcq/assessments/${u.assessmentId}/results/download-excel`, { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } });
                               if (!res.ok) { toast.error("No results to export"); return; }
                               const blob = await res.blob();
                               const url = window.URL.createObjectURL(blob);
-                              const a = document.createElement("a"); a.href = url; a.download = `MCQ_Summary_${u.userID}.csv`;
+                              const a = document.createElement("a"); a.href = url; a.download = `MCQ_Summary_${u.userID}.xlsx`;
                               document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
                             } else if (isManualTest && u.assessmentId) {
-                              const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/manual-test/submissions/${u.assessmentId}/export`, { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } });
+                              const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/manual-test/submissions/${u.assessmentId}/export-excel`, { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } });
                               if (!res.ok) { toast.error("No submissions to export"); return; }
                               const blob = await res.blob();
                               const url = window.URL.createObjectURL(blob);
-                              const a = document.createElement("a"); a.href = url; a.download = `ManualTest_${u.userID}.csv`;
+                              const a = document.createElement("a"); a.href = url; a.download = `ManualTest_${u.userID}.xlsx`;
                               document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
                             } else {
                               await adminService.exportUser(u.userID);
@@ -482,13 +482,13 @@ export default function AdminPage() {
                           } catch (err: any) { toast.error(err.message || "Nothing to export"); }
                         }} />
                         {isMcq && u.assessmentId && (
-                          <IconBtn icon={<FileSpreadsheet />} title="Detailed Report" color="indigo" onClick={async () => {
+                          <IconBtn icon={<FileSpreadsheet />} title="Detailed Excel Report" color="indigo" onClick={async () => {
                             try {
-                              const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/mcq/assessments/${u.assessmentId}/results/download-detailed`, { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } });
+                              const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/hackathonapi/api/mcq/assessments/${u.assessmentId}/results/download-detailed-excel`, { headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` } });
                               if (!res.ok) { toast.error("No detailed results"); return; }
                               const blob = await res.blob();
                               const url = window.URL.createObjectURL(blob);
-                              const a = document.createElement("a"); a.href = url; a.download = `MCQ_Detailed_${u.userID}.csv`;
+                              const a = document.createElement("a"); a.href = url; a.download = `MCQ_Detailed_${u.userID}.xlsx`;
                               document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
                             } catch { toast.error("Download failed"); }
                           }} />

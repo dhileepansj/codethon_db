@@ -9,4 +9,5 @@ public interface ISurveyDashboardService
     Task<SurveyResponseDto?> GetResponseDetailAsync(Guid responseId);
     Task<IEnumerable<FieldAnalyticsDto>> GetAnalyticsAsync(Guid surveyId);
     Task<byte[]> ExportResponsesAsync(Guid surveyId);
+    Task<byte[]> ExportResponsesExcelAsync(Guid surveyId);
 }
