@@ -14,6 +14,13 @@ import McqTestPage from "./pages/McqTestPage";
 import ManualTestWorkspacePage from "./pages/ManualTestWorkspacePage";
 import McqReviewPage from "./pages/McqReviewPage";
 import SecurityShield from "./components/common/SecurityShield";
+import SurveyListPage from "./pages/survey/SurveyListPage";
+import SurveyBuilderPage from "./pages/survey/SurveyBuilderPage";
+import SurveyRespondPage from "./pages/survey/SurveyRespondPage";
+import SurveyParticipantsPage from "./pages/survey/SurveyParticipantsPage";
+import SurveyDashboardPage from "./pages/survey/SurveyDashboardPage";
+import SurveyPreviewPage from "./pages/survey/SurveyPreviewPage";
+import SurveySettingsPage from "./pages/survey/SurveySettingsPage";
 
 const BASEPATH = import.meta.env.VITE_APP_BASEPATH || "/novaccodelab";
 
@@ -41,6 +48,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          {/* Public survey response route - no auth required */}
+          <Route path="/survey/:token" element={<SurveyRespondPage />} />
           <Route
             path="/change-password"
             element={
@@ -55,6 +64,66 @@ export default function App() {
               <ProtectedRoute>
                 <AdminRoute>
                   <AdminPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/surveys"
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <SurveyListPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/surveys/:surveyId/build"
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <SurveyBuilderPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/surveys/:surveyId/participants"
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <SurveyParticipantsPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/surveys/:surveyId/dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <SurveyDashboardPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/surveys/:surveyId/preview"
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <SurveyPreviewPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/surveys/:surveyId/settings"
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <SurveySettingsPage />
                 </AdminRoute>
               </ProtectedRoute>
             }

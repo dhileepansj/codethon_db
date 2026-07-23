@@ -23,6 +23,15 @@ public static class RepositoryServiceCollectionExtensions
         services.AddScoped<ISecuritySettingsRepository, SecuritySettingsRepository>();
         services.AddScoped<IScaffoldScriptRepository, ScaffoldScriptRepository>();
         services.AddScoped<IScheduleRepository, ScheduleRepository>();
+
+        // Survey Module
+        services.AddScoped<ISurveyRepository, SurveyRepository>();
+        services.AddScoped<ISurveyFieldRepository, SurveyFieldRepository>();
+        services.AddScoped<ISurveyParticipantRepository, SurveyParticipantRepository>();
+        services.AddScoped<ISurveyDistributionRepository, SurveyDistributionRepository>();
+        services.AddScoped<ISurveyResponseRepository, SurveyResponseRepository>();
+        services.AddScoped<ISurveyOtpRepository, SurveyOtpRepository>();
+
         return services;
     }
 }

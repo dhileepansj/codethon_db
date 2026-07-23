@@ -32,6 +32,19 @@ public class HackathonDbContext : DbContext
     public DbSet<ManualTestCase> ManualTestCases { get; set; }
     public DbSet<SubmissionAuditLog> SubmissionAuditLogs { get; set; }
 
+    // ─── Survey Module ───────────────────────────────────────────
+    public DbSet<Survey> Surveys { get; set; }
+    public DbSet<SurveyField> SurveyFields { get; set; }
+    public DbSet<SurveyFieldDependency> SurveyFieldDependencies { get; set; }
+    public DbSet<SurveyParticipant> SurveyParticipants { get; set; }
+    public DbSet<SurveyDistribution> SurveyDistributions { get; set; }
+    public DbSet<SurveyResponse> SurveyResponses { get; set; }
+    public DbSet<SurveyResponseAnswer> SurveyResponseAnswers { get; set; }
+    public DbSet<SurveyEmailSettings> SurveyEmailSettings { get; set; }
+    public DbSet<SurveyParticipantStatusLog> SurveyParticipantStatusLogs { get; set; }
+    public DbSet<SurveyReminderLog> SurveyReminderLogs { get; set; }
+    public DbSet<SurveyOtp> SurveyOtps { get; set; }
+
     public HackathonDbContext(DbContextOptions<HackathonDbContext> options)
         : base(options)
     {
@@ -290,6 +303,175 @@ public class HackathonDbContext : DbContext
                   .WithMany(s => s.TestCases)
                   .HasForeignKey(e => e.ScenarioDbId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ─── Survey Module ──────────────────────────────────────────
+
+        // Survey
+        modelBuilder.Entity<Survey>(entity =>
+        {
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.CreatedByUserId);
+            entity.HasIndex(e => e.IsDeleted);
+
+            entity.HasOne(e => e.CreatedByUser)
+                  .WithMany()
+                  .HasForeignKey(e => e.CreatedByUserId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.EmailSettings)
+                  .WithOne(s => s.Survey)
+                  .HasForeignKey<SurveyEmailSettings>(s => s.SurveyId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // SurveyField
+        modelBuilder.Entity<SurveyField>(entity =>
+        {
+            entity.HasIndex(e => new { e.SurveyId, e.SortOrder });
+
+            entity.HasOne(e => e.Survey)
+                  .WithMany(s => s.Fields)
+                  .HasForeignKey(e => e.SurveyId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(e => e.Dependencies)
+                  .WithOne(d => d.Field)
+                  .HasForeignKey(d => d.FieldId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(e => e.DependentFields)
+                  .WithOne(d => d.DependsOnField)
+                  .HasForeignKey(d => d.DependsOnFieldId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // SurveyFieldDependency
+        modelBuilder.Entity<SurveyFieldDependency>(entity =>
+        {
+            entity.HasIndex(e => e.FieldId);
+            entity.HasIndex(e => e.DependsOnFieldId);
+        });
+
+        // SurveyParticipant
+        modelBuilder.Entity<SurveyParticipant>(entity =>
+        {
+            entity.HasIndex(e => new { e.SurveyId, e.EmployeeEmail });
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.BatchId);
+
+            entity.HasOne(e => e.Survey)
+                  .WithMany(s => s.Participants)
+                  .HasForeignKey(e => e.SurveyId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Distribution)
+                  .WithOne(d => d.Participant)
+                  .HasForeignKey<SurveyDistribution>(d => d.ParticipantId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.StatusLog)
+                  .WithOne(l => l.Participant)
+                  .HasForeignKey<SurveyParticipantStatusLog>(l => l.ParticipantId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // SurveyDistribution
+        modelBuilder.Entity<SurveyDistribution>(entity =>
+        {
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => new { e.SurveyId, e.ParticipantId });
+            entity.HasIndex(e => e.EmailStatus);
+
+            entity.HasOne(e => e.Survey)
+                  .WithMany(s => s.Distributions)
+                  .HasForeignKey(e => e.SurveyId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // SurveyResponse
+        modelBuilder.Entity<SurveyResponse>(entity =>
+        {
+            entity.HasIndex(e => e.SurveyId);
+            entity.HasIndex(e => new { e.ParticipantId, e.SurveyId });
+            entity.HasIndex(e => e.SubmittedAt);
+
+            entity.HasOne(e => e.Survey)
+                  .WithMany(s => s.Responses)
+                  .HasForeignKey(e => e.SurveyId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.Participant)
+                  .WithMany()
+                  .HasForeignKey(e => e.ParticipantId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.Distribution)
+                  .WithMany()
+                  .HasForeignKey(e => e.DistributionId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // SurveyResponseAnswer
+        modelBuilder.Entity<SurveyResponseAnswer>(entity =>
+        {
+            entity.HasIndex(e => e.ResponseId);
+            entity.HasIndex(e => new { e.ResponseId, e.FieldId });
+
+            entity.HasOne(e => e.Response)
+                  .WithMany(r => r.Answers)
+                  .HasForeignKey(e => e.ResponseId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Field)
+                  .WithMany()
+                  .HasForeignKey(e => e.FieldId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // SurveyParticipantStatusLog
+        modelBuilder.Entity<SurveyParticipantStatusLog>(entity =>
+        {
+            entity.HasIndex(e => e.ParticipantId);
+            entity.HasIndex(e => e.SurveyId);
+
+            entity.HasOne(e => e.Survey)
+                  .WithMany()
+                  .HasForeignKey(e => e.SurveyId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.MarkedByUser)
+                  .WithMany()
+                  .HasForeignKey(e => e.MarkedByUserId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // SurveyReminderLog
+        modelBuilder.Entity<SurveyReminderLog>(entity =>
+        {
+            entity.HasIndex(e => e.DistributionId);
+
+            entity.HasOne(e => e.Distribution)
+                  .WithMany(d => d.Reminders)
+                  .HasForeignKey(e => e.DistributionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // SurveyOtp
+        modelBuilder.Entity<SurveyOtp>(entity =>
+        {
+            entity.HasIndex(e => new { e.ParticipantId, e.SurveyId });
+            entity.HasIndex(e => e.ExpiresAt);
+
+            entity.HasOne(e => e.Participant)
+                  .WithMany()
+                  .HasForeignKey(e => e.ParticipantId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.Survey)
+                  .WithMany()
+                  .HasForeignKey(e => e.SurveyId)
+                  .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

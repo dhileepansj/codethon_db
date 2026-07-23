@@ -247,23 +247,44 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <nav className="flex-1 py-4 px-3 space-y-1">
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+          {/* Participants — always visible at top */}
           {can("canManageUsers") && <SidebarItem icon={<Users className="h-4 w-4" />} label="Participants" active={view === "participants"} onClick={() => setView("participants")} />}
-          {can("canManageAiDetection") && <SidebarItem icon={<Shield className="h-4 w-4" />} label="AI Detection" active={false} onClick={() => setShowAiDetection(true)} />}
-          {can("canViewMonitoring") && <SidebarItem icon={<ArrowLeftRight className="h-4 w-4" />} label="Tab Switch Logs" active={false} onClick={() => setShowTabSwitchLogs(true)} />}
-          {can("canManageSecuritySettings") && <SidebarItem icon={<Key className="h-4 w-4" />} label="Security Settings" active={false} onClick={() => setShowSecuritySettings(true)} />}
-          {can("canManageScaffoldScripts") && <SidebarItem icon={<Code className="h-4 w-4" />} label="Scaffold Scripts" active={false} onClick={() => setShowScaffoldScripts(true)} />}
-          {can("canManageSessions") && <SidebarItem icon={<Clock className="h-4 w-4" />} label="DB Session Schedule" active={false} onClick={() => setShowSchedule(true)} />}
-          {can("canManageHackathonSetup") && <SidebarItem icon={<Calendar className="h-4 w-4" />} label="DB Hackathon Setup" active={false} onClick={() => setShowHackathonSetup(true)} />}
-          {can("canManageAssessments") && <SidebarItem icon={<ClipboardList className="h-4 w-4" />} label="MCQ Assessments" active={false} onClick={() => setShowMcqPanel(true)} />}
-          {can("canManageManualTesting") && <SidebarItem icon={<FileSpreadsheet className="h-4 w-4" />} label="Manual Testing" active={false} onClick={() => setShowManualTestSetup(true)} />}
-          {can("canManageServerConfig") && <SidebarItem icon={<Settings className="h-4 w-4" />} label="Server Config" active={false} onClick={() => {
-            setShowServerConfig(true);
-            setServerConfig({ ServerName: "", AdminUserId: "", AdminPassword: "", DbPrefix: "Hackathon_", DbEngineType: "SqlServer", OracleServiceName: "", Port: "1521" });
-            // Load SQL Server config by default
-            loadServerConfig("SqlServer");
-          }} />}
-          {isSuperAdmin && <SidebarItem icon={<Shield className="h-4 w-4" />} label="Admin Users" active={false} onClick={() => setShowAdminUsers(true)} />}
+
+          {/* Hackathon Group */}
+          <SidebarGroup label="Hackathon" defaultOpen={true}>
+            {can("canManageHackathonSetup") && <SidebarItem icon={<Calendar className="h-4 w-4" />} label="Hackathon Setup" active={false} onClick={() => setShowHackathonSetup(true)} />}
+            {can("canManageSessions") && <SidebarItem icon={<Clock className="h-4 w-4" />} label="Session Schedule" active={false} onClick={() => setShowSchedule(true)} />}
+            {can("canManageScaffoldScripts") && <SidebarItem icon={<Code className="h-4 w-4" />} label="Scaffold Scripts" active={false} onClick={() => setShowScaffoldScripts(true)} />}
+          </SidebarGroup>
+
+          {/* Assessments Group */}
+          <SidebarGroup label="Assessments" defaultOpen={true}>
+            {can("canManageAssessments") && <SidebarItem icon={<ClipboardList className="h-4 w-4" />} label="MCQ Assessments" active={false} onClick={() => setShowMcqPanel(true)} />}
+            {can("canManageManualTesting") && <SidebarItem icon={<FileSpreadsheet className="h-4 w-4" />} label="Manual Testing" active={false} onClick={() => setShowManualTestSetup(true)} />}
+          </SidebarGroup>
+
+          {/* Monitoring & Security Group */}
+          <SidebarGroup label="Monitoring & Security" defaultOpen={false}>
+            {can("canManageAiDetection") && <SidebarItem icon={<Shield className="h-4 w-4" />} label="AI Detection" active={false} onClick={() => setShowAiDetection(true)} />}
+            {can("canViewMonitoring") && <SidebarItem icon={<ArrowLeftRight className="h-4 w-4" />} label="Tab Switch Logs" active={false} onClick={() => setShowTabSwitchLogs(true)} />}
+            {can("canManageSecuritySettings") && <SidebarItem icon={<Key className="h-4 w-4" />} label="Security Settings" active={false} onClick={() => setShowSecuritySettings(true)} />}
+          </SidebarGroup>
+
+          {/* Surveys Group */}
+          <SidebarGroup label="Surveys" defaultOpen={true}>
+            <SidebarItem icon={<FileSpreadsheet className="h-4 w-4" />} label="All Surveys" active={false} onClick={() => navigate("/admin/surveys")} />
+          </SidebarGroup>
+
+          {/* Configuration Group */}
+          <SidebarGroup label="Configuration" defaultOpen={false}>
+            {can("canManageServerConfig") && <SidebarItem icon={<Settings className="h-4 w-4" />} label="Server Config" active={false} onClick={() => {
+              setShowServerConfig(true);
+              setServerConfig({ ServerName: "", AdminUserId: "", AdminPassword: "", DbPrefix: "Hackathon_", DbEngineType: "SqlServer", OracleServiceName: "", Port: "1521" });
+              loadServerConfig("SqlServer");
+            }} />}
+            {isSuperAdmin && <SidebarItem icon={<Shield className="h-4 w-4" />} label="Admin Users" active={false} onClick={() => setShowAdminUsers(true)} />}
+          </SidebarGroup>
         </nav>
 
         {/* Stats at bottom of sidebar */}
@@ -774,6 +795,22 @@ function SidebarItem({ icon, label, active, onClick }: { icon: React.ReactNode; 
     <button onClick={onClick} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active ? "bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-800 dark:hover:text-gray-200"}`}>
       {icon}<span>{label}</span>
     </button>
+  );
+}
+
+function SidebarGroup({ label, defaultOpen = true, children }: { label: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="pt-2">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+      >
+        <span>{label}</span>
+        <ChevronRight className={`h-3 w-3 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      {open && <div className="mt-0.5 space-y-0.5">{children}</div>}
+    </div>
   );
 }
 

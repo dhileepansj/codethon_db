@@ -26,6 +26,14 @@ public static class ApplicationServiceCollectionExtensions
         // MCQ Service
         services.AddScoped<IMcqService, McqService>();
 
+        // Survey Module
+        services.AddScoped<ISurveyService, SurveyService>();
+        services.AddScoped<ISurveyFormBuilderService, SurveyFormBuilderService>();
+        services.AddScoped<ISurveyDistributionService, SurveyDistributionService>();
+        services.AddScoped<ISurveyResponseService, SurveyResponseService>();
+        services.AddScoped<ISurveyDashboardService, SurveyDashboardService>();
+        services.AddScoped<ISurveyEmailService, SurveyEmailService>();
+
         return services;
     }
 }

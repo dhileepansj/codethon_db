@@ -3,6 +3,7 @@ using System;
 using DCView.Hackathon.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DCView.Hackathon.Infrastructure.Migrations
 {
     [DbContext(typeof(HackathonDbContext))]
-    partial class HackathonDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260723053408_AddSurveyModule")]
+    partial class AddSurveyModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1351,9 +1354,6 @@ namespace DCView.Hackathon.Infrastructure.Migrations
 
                     b.Property<string>("EmailBody")
                         .HasColumnType("text");
-
-                    b.Property<int>("EmailMode")
-                        .HasColumnType("integer");
 
                     b.Property<string>("EmailSubject")
                         .HasMaxLength(500)
