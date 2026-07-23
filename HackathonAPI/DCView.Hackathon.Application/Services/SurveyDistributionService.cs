@@ -333,11 +333,13 @@ public class SurveyDistributionService : ISurveyDistributionService
             if (existing != null) continue;
 
             var token = Guid.NewGuid().ToString("N");
+            var shortCode = SurveyShortUrlService.GenerateShortCode();
             var distribution = new SurveyDistribution
             {
                 SurveyId = surveyId,
                 ParticipantId = participant.Id,
                 Token = token,
+                ShortCode = shortCode,
                 IncludeRm = emailSettings?.IncludeRmByDefault ?? false,
                 IncludeVh = emailSettings?.IncludeVhByDefault ?? false,
                 CcEmails = emailSettings?.AdditionalCcEmails,
@@ -383,22 +385,33 @@ public class SurveyDistributionService : ISurveyDistributionService
     {
         var deadline = survey.ExpiresAt?.ToString("dd MMM yyyy") ?? "No deadline";
 
-        // Build a generic email body (no personalized link since it's bulk)
+        // For single bulk, use a generic survey landing URL (participants authenticate via email + OTP)
+        var apiBaseUrl = _config["SurveyEmail:ApiBaseUrl"]
+            ?? _config["ApiBaseUrl"]
+            ?? "http://localhost:5000/hackathonapi";
+
+        // Use the first participant's short code for the QR/link (all lead to same survey, auth by email)
+        var firstDist = distributions.First().dist;
+        var surveyLink = firstDist.ShortCode != null
+            ? SurveyShortUrlService.BuildShortUrl(apiBaseUrl, firstDist.ShortCode)
+            : $"{baseUrl}/survey/{firstDist.Token}";
+
+        var qrCodeBase64 = SurveyShortUrlService.GenerateQrCodeBase64(surveyLink);
+
         var variables = new Dictionary<string, string>
         {
             ["EmployeeName"] = "Team",
             ["SurveyTitle"] = survey.Title,
-            ["SurveyLink"] = $"{baseUrl}/survey/{{your-unique-link}}",
+            ["SurveyLink"] = surveyLink,
+            ["ShortUrl"] = surveyLink,
+            ["QrCodeBase64"] = qrCodeBase64,
             ["Deadline"] = deadline,
             ["RmName"] = "",
             ["VhName"] = "",
         };
 
         var subject = SurveyEmailTemplateBuilder.RenderSubject(emailSettings?.EmailSubject, variables);
-
-        // Build HTML body with a note that individual links are sent separately
-        var bodyHtml = SurveyEmailTemplateBuilder.RenderInvitationBody(emailSettings?.EmailBody, variables)
-            .Replace("{{your-unique-link}}", "[individual links sent to each participant]");
+        var bodyHtml = SurveyEmailTemplateBuilder.RenderInvitationBody(emailSettings?.EmailBody, variables);
 
         // Collect all TO recipients
         var toRecipients = distributions
@@ -432,6 +445,7 @@ public class SurveyDistributionService : ISurveyDistributionService
             CcEmails = ccEmails.ToList(),
             Subject = subject,
             HtmlBody = bodyHtml,
+            SurveyLink = surveyLink,
         };
 
         var sent = await _emailService.SendBulkInvitationAsync(bulkMessage);
@@ -449,43 +463,6 @@ public class SurveyDistributionService : ISurveyDistributionService
             }
         }
 
-        // Also send individual personalized links to each participant (so they have their unique URL)
-        if (sent)
-        {
-            const int batchSize = 10;
-            for (var i = 0; i < distributions.Count; i += batchSize)
-            {
-                var batch = distributions.Skip(i).Take(batchSize).ToList();
-                var tasks = batch.Select(async item =>
-                {
-                    var (dist, participant) = item;
-                    var surveyLink = $"{baseUrl}/survey/{dist.Token}";
-                    var personalVars = new Dictionary<string, string>
-                    {
-                        ["EmployeeName"] = participant.EmployeeName,
-                        ["SurveyTitle"] = survey.Title,
-                        ["SurveyLink"] = surveyLink,
-                        ["Deadline"] = deadline,
-                    };
-                    var personalSubject = $"Your personal survey link: {survey.Title}";
-                    var personalBody = SurveyEmailTemplateBuilder.RenderInvitationBody(null, personalVars);
-
-                    await _emailService.SendInvitationAsync(new SurveyEmailMessage
-                    {
-                        ToEmail = participant.EmployeeEmail,
-                        ToName = participant.EmployeeName,
-                        IncludeRm = false,
-                        IncludeVh = false,
-                        Subject = personalSubject,
-                        HtmlBody = personalBody,
-                        SurveyTitle = survey.Title,
-                        SurveyLink = surveyLink,
-                        Deadline = deadline,
-                    });
-                });
-                await Task.WhenAll(tasks);
-            }
-        }
 
         return sent ? distributions.Count : 0;
     }
@@ -511,11 +488,23 @@ public class SurveyDistributionService : ISurveyDistributionService
                 var (distribution, participant) = item;
                 var surveyLink = $"{baseUrl}/survey/{distribution.Token}";
 
+                // Build short URL and QR code
+                var apiBaseUrl = _config["SurveyEmail:ApiBaseUrl"]
+                    ?? _config["ApiBaseUrl"]
+                    ?? "http://localhost:5000/hackathonapi";
+                var shortUrl = distribution.ShortCode != null
+                    ? SurveyShortUrlService.BuildShortUrl(apiBaseUrl, distribution.ShortCode)
+                    : surveyLink;
+                var qrCodeBase64 = SurveyShortUrlService.GenerateQrCodeBase64(shortUrl);
+
                 var variables = new Dictionary<string, string>
                 {
                     ["EmployeeName"] = participant.EmployeeName,
                     ["SurveyTitle"] = survey.Title,
-                    ["SurveyLink"] = surveyLink,
+                    ["SurveyLink"] = shortUrl,
+                    ["FullSurveyLink"] = surveyLink,
+                    ["ShortUrl"] = shortUrl,
+                    ["QrCodeBase64"] = qrCodeBase64,
                     ["Deadline"] = deadline,
                     ["RmName"] = participant.RmName ?? "",
                     ["VhName"] = participant.VhName ?? "",
@@ -616,12 +605,24 @@ public class SurveyDistributionService : ISurveyDistributionService
         foreach (var participantId in dto.ParticipantIds)
         {
             var participant = await _participantRepo.GetByIdAsync(participantId);
-            if (participant == null || participant.Status == SurveyParticipantStatus.Responded
-                || participant.Status == SurveyParticipantStatus.Declined)
+            if (participant == null)
+            {
+                _logger.LogWarning("Reminder: Participant {Id} not found", participantId);
                 continue;
+            }
+            if (participant.Status == SurveyParticipantStatus.Responded
+                || participant.Status == SurveyParticipantStatus.Declined)
+            {
+                _logger.LogWarning("Reminder: Participant {Id} ({Name}) skipped — status is {Status}", participantId, participant.EmployeeName, participant.Status);
+                continue;
+            }
 
             var distribution = await _distributionRepo.GetByParticipantAndSurveyAsync(participantId, surveyId);
-            if (distribution == null) continue;
+            if (distribution == null)
+            {
+                _logger.LogWarning("Reminder: No distribution record for participant {Id} ({Name}) in survey {SurveyId}", participantId, participant.EmployeeName, surveyId);
+                continue;
+            }
 
             eligibleItems.Add((distribution, participant));
         }
@@ -649,11 +650,18 @@ public class SurveyDistributionService : ISurveyDistributionService
                 foreach (var cc in emailSettings.AdditionalCcEmails.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                     ccEmails.Add(cc);
 
+            // Use first participant's short code for the link
+            var apiBaseUrl = _config["SurveyEmail:ApiBaseUrl"] ?? "http://localhost:5000/hackathonapi";
+            var firstDist = eligibleItems.First().dist;
+            var reminderLink = firstDist.ShortCode != null
+                ? SurveyShortUrlService.BuildShortUrl(apiBaseUrl, firstDist.ShortCode)
+                : $"{baseUrl}/survey/{firstDist.Token}";
+
             var variables = new Dictionary<string, string>
             {
                 ["EmployeeName"] = "Team",
                 ["SurveyTitle"] = survey.Title,
-                ["SurveyLink"] = $"{baseUrl}/survey/[your-link]",
+                ["SurveyLink"] = reminderLink,
                 ["Deadline"] = deadline,
             };
 
@@ -666,6 +674,7 @@ public class SurveyDistributionService : ISurveyDistributionService
                 CcEmails = ccEmails.ToList(),
                 Subject = subject,
                 HtmlBody = body,
+                SurveyLink = reminderLink,
             };
 
             var sent = await _emailService.SendBulkInvitationAsync(bulkMessage);

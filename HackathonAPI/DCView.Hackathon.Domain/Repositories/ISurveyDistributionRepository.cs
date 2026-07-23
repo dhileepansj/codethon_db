@@ -6,6 +6,7 @@ public interface ISurveyDistributionRepository
 {
     Task<SurveyDistribution?> GetByIdAsync(Guid id);
     Task<SurveyDistribution?> GetByTokenAsync(string token);
+    Task<SurveyDistribution?> GetByShortCodeAsync(string shortCode);
     Task<SurveyDistribution?> GetByParticipantAndSurveyAsync(Guid participantId, Guid surveyId);
     Task<IEnumerable<SurveyDistribution>> GetBySurveyIdAsync(Guid surveyId);
     Task<SurveyDistribution> CreateAsync(SurveyDistribution distribution);

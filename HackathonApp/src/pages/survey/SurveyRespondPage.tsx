@@ -123,8 +123,8 @@ export default function SurveyRespondPage() {
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-xl">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 py-6 px-4 sm:py-10 sm:px-6">
+      <div className="w-full max-w-xl mx-auto">
         {step === 'email' && (
           <EmailStep
             email={email}
@@ -171,8 +171,8 @@ function EmailStep({ email, setEmail, onSubmit, loading, surveyTitle }: {
   email: string; setEmail: (v: string) => void; onSubmit: () => void; loading: boolean; surveyTitle: string;
 }) {
   return (
-    <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl p-8 text-center">
-      <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">{surveyTitle}</h1>
+    <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl p-6 sm:p-8 text-center shadow-sm">
+      <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-1">{surveyTitle}</h1>
       <p className="text-sm text-gray-500 mb-6">Enter your email to begin</p>
       <input
         type="email"
@@ -180,13 +180,13 @@ function EmailStep({ email, setEmail, onSubmit, loading, surveyTitle }: {
         onChange={(e) => setEmail(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
         placeholder="your.email@company.com"
-        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 mb-4"
+        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 mb-4 text-sm"
         autoFocus
       />
       <button
         onClick={onSubmit}
         disabled={!email.trim() || loading}
-        className="w-full px-4 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-gray-800 dark:text-gray-100 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+        className="w-full px-4 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
         Continue
@@ -200,10 +200,10 @@ function OtpStep({ maskedEmail, otp, setOtp, onVerify, onResend, loading }: {
   onVerify: () => void; onResend: () => void; loading: boolean;
 }) {
   return (
-    <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl p-8 text-center">
-      <h2 className="text-lg font-medium text-gray-800 dark:text-gray-100 mb-2">Verify Your Identity</h2>
+    <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl p-6 sm:p-8 text-center shadow-sm">
+      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Verify Your Identity</h2>
       <p className="text-sm text-gray-500 mb-6">
-        We've sent a 6-digit OTP to <span className="text-gray-300">{maskedEmail}</span>
+        We've sent a 6-digit OTP to <span className="text-gray-700 dark:text-gray-300 font-medium">{maskedEmail}</span>
       </p>
       <input
         type="text"
@@ -218,14 +218,14 @@ function OtpStep({ maskedEmail, otp, setOtp, onVerify, onResend, loading }: {
       <button
         onClick={onVerify}
         disabled={otp.length !== 6 || loading}
-        className="w-full px-4 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-gray-800 dark:text-gray-100 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 mb-3"
+        className="w-full px-4 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 mb-3 text-sm"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
         Verify
       </button>
       <button
         onClick={onResend}
-        className="text-sm text-teal-600 hover:text-blue-300 transition-colors"
+        className="text-sm text-teal-600 hover:text-teal-700 transition-colors"
       >
         Didn't receive? Resend OTP
       </button>
@@ -254,19 +254,19 @@ function FormStep({ form, participant, answers, setAnswers, onSubmit, loading }:
 
       {/* Participant Info (read-only) */}
       <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl p-4">
-        <p className="text-xs text-gray-500 mb-2">Your Information (auto-filled)</p>
-        <div className="grid grid-cols-3 gap-3 text-sm">
-          <div>
-            <span className="text-gray-500">ID:</span>
-            <span className="ml-2 text-gray-300">{participant.employeeId}</span>
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Your Information (auto-filled)</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-xs min-w-[40px]">ID:</span>
+            <span className="text-gray-700 dark:text-gray-300 font-medium">{participant.employeeId}</span>
           </div>
-          <div>
-            <span className="text-gray-500">Name:</span>
-            <span className="ml-2 text-gray-300">{participant.employeeName}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-xs min-w-[40px]">Name:</span>
+            <span className="text-gray-700 dark:text-gray-300 font-medium">{participant.employeeName}</span>
           </div>
-          <div>
-            <span className="text-gray-500">Email:</span>
-            <span className="ml-2 text-gray-300">{participant.employeeEmail}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-xs min-w-[40px]">Email:</span>
+            <span className="text-gray-700 dark:text-gray-300 font-medium truncate">{participant.employeeEmail}</span>
           </div>
         </div>
       </div>
@@ -287,7 +287,7 @@ function FormStep({ form, participant, answers, setAnswers, onSubmit, loading }:
       <button
         onClick={onSubmit}
         disabled={loading}
-        className="w-full px-4 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-gray-800 dark:text-gray-100 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+        className="w-full px-4 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
         Submit Response
@@ -298,10 +298,10 @@ function FormStep({ form, participant, answers, setAnswers, onSubmit, loading }:
 
 function SubmittedStep({ message }: { message: string }) {
   return (
-    <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl p-8 text-center">
-      <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+    <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl p-6 sm:p-8 text-center shadow-sm">
+      <CheckCircle className="w-14 h-14 text-green-500 mx-auto mb-4" />
       <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">Response Submitted</h2>
-      <p className="text-sm text-gray-400">{message}</p>
+      <p className="text-sm text-gray-500">{message}</p>
     </div>
   );
 }

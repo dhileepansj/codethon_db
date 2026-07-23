@@ -3,6 +3,7 @@ using System;
 using DCView.Hackathon.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DCView.Hackathon.Infrastructure.Migrations
 {
     [DbContext(typeof(HackathonDbContext))]
-    partial class HackathonDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260723080306_AddShortCodeAndQr")]
+    partial class AddShortCodeAndQr
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

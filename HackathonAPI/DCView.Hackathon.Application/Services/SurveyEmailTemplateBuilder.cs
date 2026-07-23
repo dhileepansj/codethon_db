@@ -79,6 +79,16 @@ div {margin:0 !important;}
 
 <p style=""margin:16px 0 4px 0;font-size:12px;line-height:18px;color:#6b7280;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;"">If the button doesn't work, copy and paste this link into your browser:</p>
 <p style=""margin:0;font-size:12px;line-height:18px;color:#2563eb;word-break:break-all;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;"">{{SurveyLink}}</p>
+
+<!-- QR Code -->
+<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" border=""0"" style=""margin:24px 0 0 0;"">
+<tr>
+<td align=""center"">
+<p style=""margin:0 0 8px 0;font-size:12px;color:#6b7280;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;"">Or scan this QR code with your mobile:</p>
+<img src=""cid:qrcode"" width=""150"" height=""150"" alt=""QR Code"" style=""display:block;margin:0 auto;border:1px solid #e5e7eb;"" />
+</td>
+</tr>
+</table>
 </td>
 </tr>
 
@@ -161,6 +171,16 @@ div {margin:0 !important;}
 </table>
 
 <p style=""margin:16px 0 0 0;font-size:12px;line-height:18px;color:#6b7280;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;""><strong>Deadline:</strong> {{Deadline}}</p>
+
+<!-- QR Code -->
+<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" border=""0"" style=""margin:24px 0 0 0;"">
+<tr>
+<td align=""center"">
+<p style=""margin:0 0 8px 0;font-size:12px;color:#6b7280;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;"">Or scan this QR code with your mobile:</p>
+<img src=""cid:qrcode"" width=""150"" height=""150"" alt=""QR Code"" style=""display:block;margin:0 auto;border:1px solid #e5e7eb;"" />
+</td>
+</tr>
+</table>
 </td>
 </tr>
 

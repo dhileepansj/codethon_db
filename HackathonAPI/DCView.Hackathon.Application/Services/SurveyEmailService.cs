@@ -65,6 +65,16 @@ public class SurveyEmailService : ISurveyEmailService
 
         mime.Subject = message.Subject;
         var body = new BodyBuilder { HtmlBody = message.HtmlBody };
+
+        // Attach QR code as CID embedded image if link available
+        if (!string.IsNullOrWhiteSpace(message.SurveyLink))
+        {
+            var qrBytes = SurveyShortUrlService.GenerateQrCodePng(message.SurveyLink, 6);
+            var qrImage = body.LinkedResources.Add("qrcode.png", qrBytes, new MimeKit.ContentType("image", "png"));
+            qrImage.ContentId = "qrcode";
+            qrImage.ContentDisposition = new MimeKit.ContentDisposition(MimeKit.ContentDisposition.Inline);
+        }
+
         mime.Body = body.ToMessageBody();
 
         return await SendAsync(mime);
@@ -182,6 +192,16 @@ public class SurveyEmailService : ISurveyEmailService
         {
             HtmlBody = message.HtmlBody
         };
+
+        // Attach QR code as embedded CID image if the link is available
+        if (!string.IsNullOrWhiteSpace(message.SurveyLink))
+        {
+            var qrBytes = SurveyShortUrlService.GenerateQrCodePng(message.SurveyLink, 6);
+            var qrImage = body.LinkedResources.Add("qrcode.png", qrBytes, new MimeKit.ContentType("image", "png"));
+            qrImage.ContentId = "qrcode";
+            qrImage.ContentDisposition = new MimeKit.ContentDisposition(MimeKit.ContentDisposition.Inline);
+        }
+
         mime.Body = body.ToMessageBody();
 
         return mime;

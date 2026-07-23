@@ -380,6 +380,7 @@ public class HackathonDbContext : DbContext
         modelBuilder.Entity<SurveyDistribution>(entity =>
         {
             entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => e.ShortCode).IsUnique();
             entity.HasIndex(e => new { e.SurveyId, e.ParticipantId });
             entity.HasIndex(e => e.EmailStatus);
 

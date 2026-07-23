@@ -25,6 +25,12 @@ public class SurveyDistributionRepository : ISurveyDistributionRepository
                     .ThenInclude(f => f.Dependencies)
             .FirstOrDefaultAsync(d => d.Token == token);
 
+    public async Task<SurveyDistribution?> GetByShortCodeAsync(string shortCode)
+        => await _db.SurveyDistributions
+            .Include(d => d.Participant)
+            .Include(d => d.Survey)
+            .FirstOrDefaultAsync(d => d.ShortCode == shortCode);
+
     public async Task<SurveyDistribution?> GetByParticipantAndSurveyAsync(Guid participantId, Guid surveyId)
         => await _db.SurveyDistributions
             .FirstOrDefaultAsync(d => d.ParticipantId == participantId && d.SurveyId == surveyId);

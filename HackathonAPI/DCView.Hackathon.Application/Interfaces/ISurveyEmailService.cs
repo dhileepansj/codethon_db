@@ -58,4 +58,9 @@ public class BulkSurveyEmailMessage
 
     public string Subject { get; set; } = string.Empty;
     public string HtmlBody { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The survey link for QR code generation.
+    /// </summary>
+    public string? SurveyLink { get; set; }
 }

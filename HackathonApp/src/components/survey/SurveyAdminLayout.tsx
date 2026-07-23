@@ -105,9 +105,9 @@ export default function SurveyAdminLayout({ children }: SurveyAdminLayoutProps) 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-teal-600 flex items-center justify-center text-white text-[10px] font-bold">
-                {user?.userId?.charAt(0)?.toUpperCase() || 'A'}
+                {user?.userID?.charAt(0)?.toUpperCase() || 'A'}
               </div>
-              <span className="text-xs text-gray-600 dark:text-gray-400">{user?.userId || 'Admin'}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">{user?.userID || 'Admin'}</span>
             </div>
             <button
               onClick={handleLogout}

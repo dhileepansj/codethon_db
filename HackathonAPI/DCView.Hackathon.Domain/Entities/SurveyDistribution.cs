@@ -21,6 +21,12 @@ public class SurveyDistribution
     [Required, MaxLength(100)]
     public string Token { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Short code for URL shortener (6 chars alphanumeric).
+    /// </summary>
+    [MaxLength(10)]
+    public string? ShortCode { get; set; }
+
     public DateTime? SentAt { get; set; }
 
     public bool IncludeRm { get; set; } = false;
